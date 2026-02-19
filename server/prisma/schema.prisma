@@ -1,0 +1,558 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model audit_logs {
+  id           String   @id
+  adminId      String
+  action       String   @db.VarChar(100)
+  targetUserId String?
+  targetPetId  String?
+  description  String
+  changes      Json?
+  ipAddress    String?  @db.VarChar(50)
+  userAgent    String?
+  createdAt    DateTime @default(now())
+
+  @@index([action])
+  @@index([adminId])
+  @@index([createdAt])
+  @@index([targetUserId])
+}
+
+model breeding_requests {
+  id                                          String        @id
+  initiatorId                                 String
+  initiatorPetId                              String
+  targetUserId                                String
+  targetPetId                                 String
+  status                                      RequestStatus @default(PENDING)
+  message                                     String?
+  requestedDate                               DateTime      @default(now())
+  preferredDate                               DateTime?
+  estimatedDeliveryDate                       DateTime?
+  createdAt                                   DateTime      @default(now())
+  updatedAt                                   DateTime
+  users_breeding_requests_initiatorIdTousers  users         @relation("breeding_requests_initiatorIdTousers", fields: [initiatorId], references: [id], onDelete: Cascade)
+  pets_breeding_requests_initiatorPetIdTopets pets          @relation("breeding_requests_initiatorPetIdTopets", fields: [initiatorPetId], references: [id], onDelete: Cascade)
+  pets_breeding_requests_targetPetIdTopets    pets          @relation("breeding_requests_targetPetIdTopets", fields: [targetPetId], references: [id], onDelete: Cascade)
+  users_breeding_requests_targetUserIdTousers users         @relation("breeding_requests_targetUserIdTousers", fields: [targetUserId], references: [id], onDelete: Cascade)
+  matches                                     matches?
+  messages                                    messages[]
+  reviews                                     reviews[]
+
+  @@unique([initiatorId, initiatorPetId, targetUserId, targetPetId])
+  @@index([createdAt])
+  @@index([initiatorId])
+  @@index([status])
+  @@index([targetUserId])
+}
+
+model certifications {
+  id                 String            @id
+  petId              String
+  type               CertificationType
+  name               String            @db.VarChar(150)
+  issueDate          DateTime
+  expiryDate         DateTime?
+  certificateUrl     String?           @db.VarChar(500)
+  verificationStatus String            @default("VERIFIED") @db.VarChar(50)
+  issuer             String?           @db.VarChar(200)
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime
+  pets               pets              @relation(fields: [petId], references: [id], onDelete: Cascade)
+
+  @@index([petId])
+  @@index([type])
+  @@index([verificationStatus])
+}
+
+model clinic {
+  id              String            @id
+  name            String            @db.VarChar(200)
+  description     String?
+  phone           String            @db.VarChar(20)
+  email           String            @db.VarChar(255)
+  address         String            @db.VarChar(500)
+  city            String            @db.VarChar(100)
+  country         String            @db.VarChar(100)
+  operatingHours  Json
+  isActive        Boolean           @default(true)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime
+  clinic_bookings clinic_bookings[]
+  clinic_services clinic_services[]
+}
+
+model clinic_bookings {
+  id              String          @id
+  clinicId        String
+  serviceId       String
+  petId           String
+  userId          String
+  bookingDate     DateTime
+  timeSlot        String          @db.VarChar(20)
+  status          BookingStatus   @default(PENDING)
+  userNotes       String?
+  adminNotes      String?
+  certificate     String?         @db.VarChar(500)
+  resultNotes     String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime
+  completedAt     DateTime?
+  cancelledAt     DateTime?
+  clinic          clinic          @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  pets            pets            @relation(fields: [petId], references: [id], onDelete: Cascade)
+  clinic_services clinic_services @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  users           users           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([clinicId, bookingDate, timeSlot])
+  @@index([bookingDate])
+  @@index([petId])
+  @@index([status])
+  @@index([userId])
+}
+
+model clinic_services {
+  id              String            @id
+  clinicId        String
+  type            ServiceType
+  name            String            @db.VarChar(200)
+  description     String?
+  duration        Int
+  price           Float
+  isActive        Boolean           @default(true)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime
+  clinic_bookings clinic_bookings[]
+  clinic          clinic            @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+
+  @@index([clinicId])
+  @@index([type])
+}
+
+model genetic_tests {
+  id             String   @id
+  petId          String
+  testName       String   @db.VarChar(150)
+  provider       String   @db.VarChar(150)
+  testDate       DateTime
+  result         String
+  certificateUrl String?  @db.VarChar(500)
+  status         String   @default("COMPLETED") @db.VarChar(50)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime
+  pets           pets     @relation(fields: [petId], references: [id], onDelete: Cascade)
+
+  @@index([petId])
+  @@index([testDate])
+}
+
+model health_records {
+  id               String   @id
+  petId            String
+  recordType       String   @db.VarChar(50)
+  recordDate       DateTime
+  veterinarianName String   @db.VarChar(150)
+  clinicName       String?  @db.VarChar(150)
+  details          String?
+  certificateUrl   String?  @db.VarChar(500)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime
+  pets             pets     @relation(fields: [petId], references: [id], onDelete: Cascade)
+
+  @@index([petId])
+  @@index([recordDate])
+  @@index([recordType])
+}
+
+model matches {
+  id                                String            @id
+  breedingRequestId                 String            @unique
+  initiatorPetId                    String
+  targetPetId                       String
+  status                            MatchStatus       @default(PROPOSED)
+  scheduledDate                     DateTime?
+  completedDate                     DateTime?
+  notes                             String?
+  resultingOffspring                Int?
+  createdAt                         DateTime          @default(now())
+  updatedAt                         DateTime
+  breeding_requests                 breeding_requests @relation(fields: [breedingRequestId], references: [id], onDelete: Cascade)
+  pets_matches_initiatorPetIdTopets pets              @relation("matches_initiatorPetIdTopets", fields: [initiatorPetId], references: [id])
+  pets_matches_targetPetIdTopets    pets              @relation("matches_targetPetIdTopets", fields: [targetPetId], references: [id])
+
+  @@index([completedDate])
+  @@index([scheduledDate])
+  @@index([status])
+}
+
+model messages {
+  id                                String             @id
+  senderId                          String
+  recipientId                       String
+  breedingRequestId                 String?
+  content                           String
+  status                            MessageStatus      @default(SENT)
+  isRead                            Boolean            @default(false)
+  readAt                            DateTime?
+  createdAt                         DateTime           @default(now())
+  updatedAt                         DateTime
+  breeding_requests                 breeding_requests? @relation(fields: [breedingRequestId], references: [id])
+  users_messages_recipientIdTousers users              @relation("messages_recipientIdTousers", fields: [recipientId], references: [id], onDelete: Cascade)
+  users_messages_senderIdTousers    users              @relation("messages_senderIdTousers", fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([breedingRequestId])
+  @@index([createdAt])
+  @@index([isRead])
+  @@index([recipientId])
+  @@index([senderId])
+}
+
+model pets {
+  id                                                       String              @id
+  ownerId                                                  String
+  name                                                     String              @db.VarChar(100)
+  species                                                  String              @db.VarChar(50)
+  breed                                                    String              @db.VarChar(100)
+  gender                                                   Gender
+  dateOfBirth                                              DateTime?
+  weight                                                   Float?
+  height                                                   Float?
+  color                                                    String?             @db.VarChar(100)
+  distinctiveFeatures                                      String?
+  isVaccinated                                             Boolean             @default(false)
+  isNeutered                                               Boolean             @default(false)
+  healthConditions                                         String?
+  lastHealthCheckDate                                      DateTime?
+  nextVaccinationDate                                      DateTime?
+  breedingStatus                                           BreedingStatus      @default(NOT_AVAILABLE)
+  breedingPrice                                            Float?
+  nextAvailableDate                                        DateTime?
+  hasPedigree                                              Boolean             @default(false)
+  pedigreeNumber                                           String?             @unique @db.VarChar(100)
+  registrationNumber                                       String?             @unique @db.VarChar(100)
+  microchipNumber                                          String?             @unique @db.VarChar(100)
+  images                                                   String[]            @default([])
+  videos                                                   String[]            @default([])
+  description                                              String?
+  isPublished                                              Boolean             @default(true)
+  isActive                                                 Boolean             @default(true)
+  createdAt                                                DateTime            @default(now())
+  updatedAt                                                DateTime
+  deletedAt                                                DateTime?
+  breeding_requests_breeding_requests_initiatorPetIdTopets breeding_requests[] @relation("breeding_requests_initiatorPetIdTopets")
+  breeding_requests_breeding_requests_targetPetIdTopets    breeding_requests[] @relation("breeding_requests_targetPetIdTopets")
+  certifications                                           certifications[]
+  clinic_bookings                                          clinic_bookings[]
+  genetic_tests                                            genetic_tests[]
+  health_records                                           health_records[]
+  matches_matches_initiatorPetIdTopets                     matches[]           @relation("matches_initiatorPetIdTopets")
+  matches_matches_targetPetIdTopets                        matches[]           @relation("matches_targetPetIdTopets")
+  users                                                    users               @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@unique([ownerId, name])
+  @@index([breed])
+  @@index([breedingStatus])
+  @@index([createdAt])
+  @@index([gender])
+  @@index([isPublished])
+  @@index([ownerId])
+  @@index([species])
+}
+
+model refresh_tokens {
+  id        String   @id
+  token     String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  users     users    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([expiresAt])
+  @@index([userId])
+}
+
+model reports {
+  id                                  String       @id
+  reporterUserId                      String
+  reportedUserId                      String?
+  reportedPetId                       String?
+  reportedContentId                   String?
+  contentType                         String       @db.VarChar(50)
+  reason                              ReportReason
+  description                         String
+  status                              ReportStatus @default(PENDING)
+  resolvedBy                          String?
+  resolutionNotes                     String?
+  resolvedAt                          DateTime?
+  createdAt                           DateTime     @default(now())
+  updatedAt                           DateTime
+  users_reports_reportedUserIdTousers users?       @relation("reports_reportedUserIdTousers", fields: [reportedUserId], references: [id])
+  users_reports_reporterUserIdTousers users        @relation("reports_reporterUserIdTousers", fields: [reporterUserId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt])
+  @@index([reportedUserId])
+  @@index([reporterUserId])
+  @@index([status])
+}
+
+model reviews {
+  id                              String            @id
+  reviewerId                      String
+  revieweeId                      String
+  breedingRequestId               String
+  rating                          Int
+  comment                         String?
+  helpfulCount                    Int               @default(0)
+  createdAt                       DateTime          @default(now())
+  updatedAt                       DateTime
+  breeding_requests               breeding_requests @relation(fields: [breedingRequestId], references: [id], onDelete: Cascade)
+  users_reviews_revieweeIdTousers users             @relation("reviews_revieweeIdTousers", fields: [revieweeId], references: [id], onDelete: Cascade)
+  users_reviews_reviewerIdTousers users             @relation("reviews_reviewerIdTousers", fields: [reviewerId], references: [id], onDelete: Cascade)
+
+  @@unique([reviewerId, breedingRequestId])
+  @@index([createdAt])
+  @@index([rating])
+  @@index([revieweeId])
+}
+
+model subscriptions {
+  id                   String             @id
+  userId               String             @unique
+  tier                 SubscriptionTier   @default(FREE)
+  status               SubscriptionStatus @default(ACTIVE)
+  stripeCustomerId     String?
+  stripeSubscriptionId String?
+  stripePriceId        String?
+  startDate            DateTime           @default(now())
+  currentPeriodStart   DateTime?
+  currentPeriodEnd     DateTime?
+  cancelAt             DateTime?
+  cancelledAt          DateTime?
+  petsListedCount      Int                @default(0)
+  requestsSentCount    Int                @default(0)
+  requestsSentMonth    String?
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime
+  users                users              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+  @@index([userId])
+}
+
+model support_tickets {
+  id        String         @id
+  userId    String?
+  name      String
+  email     String
+  subject   String
+  category  TicketCategory
+  message   String
+  priority  TicketPriority @default(NORMAL)
+  status    TicketStatus   @default(OPEN)
+  replies   Json?
+  createdAt DateTime       @default(now())
+  updatedAt DateTime
+  users     users?         @relation(fields: [userId], references: [id])
+
+  @@index([createdAt])
+  @@index([email])
+  @@index([status])
+  @@index([userId])
+}
+
+model system_settings {
+  id                     String   @id @unique
+  maintenanceMode        Boolean  @default(false)
+  maintenanceMessage     String?
+  enableUserRegistration Boolean  @default(true)
+  enableBreedingRequests Boolean  @default(true)
+  enableMessaging        Boolean  @default(true)
+  maxWarningsBeforeBan   Int      @default(3)
+  autoDeleteReportsAfter Int      @default(90)
+  updatedAt              DateTime @updatedAt
+}
+
+model users {
+  id                                                      String              @id @default(uuid())
+  email                                                   String              @unique @db.VarChar(255)
+  password                                                String
+  firstName                                               String              @db.VarChar(100)
+  lastName                                                String              @db.VarChar(100)
+  phone                                                   String?             @db.VarChar(20)
+  avatar                                                  String?             @db.VarChar(500)
+  bio                                                     String?
+  address                                                 String?             @db.VarChar(500)
+  city                                                    String?             @db.VarChar(100)
+  country                                                 String?             @db.VarChar(100)
+  role                                                    Role                @default(USER)
+  isVerified                                              Boolean             @default(false)
+  verificationToken                                       String?             @unique @db.VarChar(255)
+  verificationExpiresAt                                   DateTime?
+  rating                                                  Float               @default(0)
+  totalMatches                                            Int                 @default(0)
+  totalReviews                                            Int                 @default(0)
+  subscriptionTier                                        SubscriptionTier    @default(FREE)
+  createdAt                                               DateTime            @default(now())
+  updatedAt                                               DateTime            @updatedAt
+  deletedAt                                               DateTime?
+  bannedAt                                                DateTime?
+  bannedBy                                                String?
+  bannedReason                                            String?
+  isBanned                                                Boolean             @default(false)
+  lastWarningAt                                           DateTime?
+  warnings                                                Int                 @default(0)
+  breeding_requests_breeding_requests_initiatorIdTousers  breeding_requests[] @relation("breeding_requests_initiatorIdTousers")
+  breeding_requests_breeding_requests_targetUserIdTousers breeding_requests[] @relation("breeding_requests_targetUserIdTousers")
+  clinic_bookings                                         clinic_bookings[]
+  messages_messages_recipientIdTousers                    messages[]          @relation("messages_recipientIdTousers")
+  messages_messages_senderIdTousers                       messages[]          @relation("messages_senderIdTousers")
+  pets                                                    pets[]
+  refresh_tokens                                          refresh_tokens[]
+  reports_reports_reportedUserIdTousers                   reports[]           @relation("reports_reportedUserIdTousers")
+  reports_reports_reporterUserIdTousers                   reports[]           @relation("reports_reporterUserIdTousers")
+  reviews_reviews_revieweeIdTousers                       reviews[]           @relation("reviews_revieweeIdTousers")
+  reviews_reviews_reviewerIdTousers                       reviews[]           @relation("reviews_reviewerIdTousers")
+  subscriptions                                           subscriptions?
+  support_tickets                                         support_tickets[]
+
+  @@index([city])
+  @@index([createdAt])
+  @@index([email])
+  @@index([isBanned])
+  @@index([isVerified])
+  @@index([role])
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED_USER
+  CANCELLED_ADMIN
+  NO_SHOW
+}
+
+enum BreedingStatus {
+  AVAILABLE
+  NOT_AVAILABLE
+  RETIRED
+}
+
+enum CertificationType {
+  PEDIGREE
+  GENETIC_TEST
+  HEALTH_CHECK
+  VACCINATION
+  MICROCHIP
+  REGISTRATION
+  OTHER
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  UNKNOWN
+}
+
+enum MatchStatus {
+  PROPOSED
+  CONFIRMED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum MessageStatus {
+  SENT
+  DELIVERED
+  READ
+}
+
+enum ReportReason {
+  INAPPROPRIATE_CONTENT
+  HARASSMENT
+  SPAM
+  FRAUD
+  SCAM
+  DANGEROUS_BEHAVIOR
+  ANIMAL_ABUSE
+  FAKE_PROFILE
+  OTHER
+}
+
+enum ReportStatus {
+  PENDING
+  REVIEWING
+  RESOLVED
+  REJECTED
+  APPEALED
+}
+
+enum RequestStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  CANCELLED
+  COMPLETED
+}
+
+enum Role {
+  USER
+  BREEDER
+  ADMIN
+  MODERATOR
+  SUPER_ADMIN
+}
+
+enum ServiceType {
+  HEALTH_CHECKUP
+  VACCINATION
+  GENETIC_TEST
+  MICROCHIP
+  CERTIFICATION
+  EMERGENCY
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  EXPIRED
+  CANCELLED
+  PAYMENT_FAILED
+}
+
+enum SubscriptionTier {
+  FREE
+  PREMIUM
+}
+
+enum TicketCategory {
+  TECHNICAL
+  ACCOUNT
+  PAYMENT
+  MATCHING
+  SAFETY
+  FEEDBACK
+  OTHER
+}
+
+enum TicketPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  REPLIED
+  CLOSED
+}

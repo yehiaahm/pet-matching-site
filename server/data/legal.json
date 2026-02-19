@@ -1,0 +1,22 @@
+{
+  "terms": {
+    "en": {
+      "title": "Terms & Conditions",
+      "content": "<h2>Welcome to PetMate</h2><p>These are the English Terms & Conditions. Replace this placeholder with the official content.</p>"
+    },
+    "ar": {
+      "title": "الشروط والأحكام",
+      "content": "<h2>مرحباً بك في PetMate</h2><p>هذه هي الشروط والأحكام باللغة العربية. استبدل هذا النص بالنص الرسمي.</p>"
+    }
+  },
+  "privacy": {
+    "en": {
+      "title": "Privacy Policy",
+      "content": "<h2>Privacy</h2><p>English privacy policy placeholder.</p>"
+    },
+    "ar": {
+      "title": "سياسة الخصوصية",
+      "content": "<h2>الخصوصية</h2><p>نص تجريبي لسياسة الخصوصية باللغة العربية.</p>"
+    }
+  }
+}

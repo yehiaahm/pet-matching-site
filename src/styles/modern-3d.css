@@ -1,0 +1,250 @@
+/* Modern 3D theme overlay: purely CSS, no JS, respects existing structure/colors */
+
+/* Global 3D background with subtle animated blobs and grid */
+:root {
+  --accent-1: oklch(0.86 0.12 230);
+  --accent-2: oklch(0.9 0.08 150);
+  --accent-3: oklch(0.92 0.08 80);
+}
+
+body {
+  perspective: 1200px;
+  background: radial-gradient(1200px 600px at 10% 10%, color(display-p3 0.85 0.9 1 / 0.35), transparent 60%),
+              radial-gradient(800px 500px at 90% 20%, color(display-p3 0.85 1 0.9 / 0.25), transparent 60%),
+              radial-gradient(900px 500px at 50% 100%, color(display-p3 0.95 0.9 0.85 / 0.25), transparent 60%);
+  background-blend-mode: screen, screen, normal;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: -10vmax;
+  background:
+    radial-gradient(35vmax 35vmax at 15% 20%, color(display-p3 0.4 0.7 1 / 0.12), transparent 40%),
+    radial-gradient(25vmax 25vmax at 85% 10%, color(display-p3 0.3 0.9 0.6 / 0.10), transparent 45%),
+    radial-gradient(30vmax 30vmax at 50% 90%, color(display-p3 1 0.85 0.6 / 0.10), transparent 45%);
+  filter: blur(30px);
+  transform: translateZ(-200px);
+  pointer-events: none;
+}
+
+/* Decorative paw prints and animal silhouettes using pure CSS + data URIs */
+body::marker { /* noop for older engines */ }
+
+.ambient-animals::before,
+.ambient-animals::after,
+body::before {
+  mask-image: radial-gradient(closest-side, rgba(0,0,0,0.12), transparent 75%);
+}
+
+/* Global ambient animal silhouettes layer */
+html::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-repeat: no-repeat;
+  background-size: 180px 140px, 160px 120px, 140px 140px, 120px 120px;
+  background-position: 6% 18%, 92% 14%, 8% 86%, 90% 82%;
+  opacity: 0.12;
+  filter: saturate(140%);
+  background-image:
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 160'><defs><linearGradient id='g' x1='0' x2='1' y1='0' y2='1'><stop offset='0%' stop-color='%230ea5e9'/><stop offset='100%' stop-color='%2334d399'/></linearGradient></defs><rect rx='16' width='200' height='160' fill='url(%23g)'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' font-size='72'>🐕</text></svg>"),
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 160'><defs><linearGradient id='g' x1='0' x2='1' y1='0' y2='1'><stop offset='0%' stop-color='%235256ff'/><stop offset='100%' stop-color='%2334d399'/></linearGradient></defs><rect rx='16' width='200' height='160' fill='url(%23g)'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' font-size='72'>🐱</text></svg>"),
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 160'><defs><linearGradient id='g' x1='0' x2='1' y1='0' y2='1'><stop offset='0%' stop-color='%2300c6ff'/><stop offset='100%' stop-color='%23a3e635'/></linearGradient></defs><rect rx='16' width='200' height='160' fill='url(%23g)'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' font-size='72'>🦜</text></svg>"),
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 160'><defs><linearGradient id='g' x1='0' x2='1' y1='0' y2='1'><stop offset='0%' stop-color='%230ea5e9'/><stop offset='100%' stop-color='%2334d399'/></linearGradient></defs><rect rx='16' width='200' height='160' fill='url(%23g)'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' font-size='72'>🐾</text></svg>");
+}
+
+/* Paw print pattern overlay */
+html::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.10;
+  background-image: radial-gradient(circle at 10px 10px, rgba(0,0,0,0.08) 3px, transparent 4px), radial-gradient(circle at 18px 14px, rgba(0,0,0,0.08) 2px, transparent 3px), radial-gradient(circle at 6px 18px, rgba(0,0,0,0.08) 2px, transparent 3px);
+  background-size: 48px 48px;
+}
+
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image: linear-gradient(transparent 95%, rgba(0,0,0,0.04) 95%), linear-gradient(90deg, transparent 95%, rgba(0,0,0,0.04) 95%);
+  background-size: 24px 24px, 24px 24px;
+  mask-image: radial-gradient(closest-side, rgba(0,0,0,0.08), transparent 75%);
+}
+
+/* Glassy sticky header with subtle 3D depth */
+header.sticky {
+  background: color(display-p3 1 1 1 / 0.55);
+  backdrop-filter: saturate(160%) blur(12px);
+  border-bottom: 1px solid color(display-p3 0.9 0.9 0.95 / 0.55);
+  box-shadow: 0 12px 30px color(display-p3 0 0 0 / 0.06);
+  transform: translateZ(0);
+}
+
+/* Gradient brand and CTA glow */
+[class*="from-blue-500"][class*="to-green-500"] {
+  box-shadow: 0 8px 24px -6px color(display-p3 0.3 0.7 0.4 / 0.35), inset 0 -2px 8px color(display-p3 1 1 1 / 0.20);
+  transform: translateZ(1px);
+}
+
+/* Card: 3D lift + sheen without requiring new classes */
+/* Target common Card wrapper: rounded + border + bg-card */
+div[class*="rounded-lg"][class*="border"][class*="bg-card"] {
+  position: relative;
+  transition: transform 300ms ease, box-shadow 300ms ease, background 300ms ease;
+  transform-style: preserve-3d;
+  background: color(display-p3 1 1 1 / 0.75);
+  backdrop-filter: blur(6px) saturate(140%);
+  border-color: color(display-p3 0.85 0.88 0.95 / 0.65);
+  box-shadow: 0 10px 25px -10px color(display-p3 0 0 0 / 0.25);
+}
+
+div[class*="rounded-lg"][class*="border"][class*="bg-card"]::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(135deg, color(display-p3 0.7 0.85 1 / 0.35), color(display-p3 0.8 1 0.8 / 0.35));
+  -webkit-mask: linear-gradient(#000, #000) content-box, linear-gradient(#000, #000);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  transform: translateZ(2px);
+}
+
+/* Tilt + lift on hover */
+@media (hover: hover) {
+  div[class*="rounded-lg"][class*="border"][class*="bg-card"]:hover {
+    transform: translateY(-6px) rotateX(2deg) rotateY(-2deg);
+    box-shadow: 0 22px 65px -22px color(display-p3 0 0 0 / 0.45);
+  }
+}
+
+/* Images inside cards: add soft depth */
+div[class*="rounded-lg"][class*="border"][class*="bg-card"] img {
+  transform: translateZ(1px);
+}
+
+/* Badges: refine for 3D */
+.badge, [class*="Badge"], [class*="badge"] {
+  backdrop-filter: saturate(140%) blur(4px);
+  box-shadow: 0 6px 12px -8px rgba(0,0,0,0.2);
+}
+
+/* Search bar container: slight glass effect */
+div[class*="bg-white"][class*="rounded-xl"] {
+  background: color(display-p3 1 1 1 / 0.7);
+  backdrop-filter: blur(8px) saturate(140%);
+  box-shadow: 0 15px 40px -18px color(display-p3 0 0 0 / 0.3);
+}
+
+/* Page container: depth layering */
+main {
+  transform-style: preserve-3d;
+}
+
+/* 3D Feature Ribbon Styles */
+.feature-ribbon-container {
+  --ribbon-rot-x: 0deg;
+  --ribbon-rot-y: 0deg;
+  position: relative;
+  margin: 16px auto 24px;
+  max-width: 1120px;
+  padding: 12px;
+  border-radius: 16px;
+  background: color(display-p3 1 1 1 / 0.55);
+  backdrop-filter: saturate(160%) blur(10px);
+  box-shadow: 0 18px 60px -24px color(display-p3 0 0 0 / 0.35);
+  transform: perspective(1200px) rotateX(var(--ribbon-rot-x)) rotateY(var(--ribbon-rot-y));
+  transition: box-shadow 220ms ease;
+}
+
+.feature-ribbon-inner {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(180px, 1fr);
+  gap: 12px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.feature-ribbon-item {
+  position: relative;
+  display: grid;
+  align-items: center;
+  justify-items: center;
+  gap: 8px;
+  padding: 16px 12px;
+  border-radius: 14px;
+  color: var(--foreground);
+  background: linear-gradient(180deg, color(display-p3 1 1 1 / 0.6), color(display-p3 1 1 1 / 0.4));
+  border: 1px solid color(display-p3 0.85 0.88 0.95 / 0.6);
+  box-shadow: 0 8px 24px -10px color(display-p3 0 0 0 / 0.25);
+  transform: translateZ(2px);
+}
+
+.feature-item-gloss {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  background: linear-gradient(135deg, color(display-p3 0.7 0.85 1 / 0.25), color(display-p3 0.8 1 0.8 / 0.25));
+  -webkit-mask: linear-gradient(#000, #000) content-box, linear-gradient(#000, #000);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+.feature-item-label { font-weight: 600; }
+.feature-item-btn { backdrop-filter: blur(4px); }
+.feature-item-badge { position: absolute; top: 8px; right: 8px; }
+
+@media (prefers-color-scheme: dark) {
+  .feature-ribbon-container {
+    background: color(display-p3 0.15 0.15 0.16 / 0.65);
+  }
+  .feature-ribbon-item {
+    background: linear-gradient(180deg, color(display-p3 0.16 0.16 0.18 / 0.6), color(display-p3 0.16 0.16 0.18 / 0.4));
+    border-color: color(display-p3 0.25 0.28 0.35 / 0.6);
+  }
+}
+
+/* Floating ambient light accent near hero icon */
+header .bg-gradient-to-br {
+  position: relative;
+  overflow: visible;
+}
+header .bg-gradient-to-br::after {
+  content: "";
+  position: absolute;
+  inset: auto auto -20px -20px;
+  width: 120px;
+  height: 120px;
+  background: radial-gradient(closest-side, color(display-p3 0.3 0.8 0.5 / 0.28), transparent);
+  filter: blur(20px);
+  transform: translateZ(-1px);
+  pointer-events: none;
+}
+
+/* Micro-interactions for buttons */
+button:hover {
+  transform: translateZ(2px);
+}
+
+/* Respect dark mode variables automatically */
+@media (prefers-color-scheme: dark) {
+  header.sticky {
+    background: color(display-p3 0.13 0.13 0.15 / 0.65);
+    border-bottom-color: color(display-p3 0.3 0.3 0.35 / 0.35);
+    box-shadow: 0 15px 40px color(display-p3 0 0 0 / 0.4);
+  }
+  div[class*="rounded-lg"][class*="border"][class*="bg-card"] {
+    background: color(display-p3 0.15 0.15 0.16 / 0.75);
+    border-color: color(display-p3 0.25 0.28 0.35 / 0.5);
+  }
+}

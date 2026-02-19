@@ -1,0 +1,470 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ===========================================
+// USER MODELS
+// ===========================================
+
+model User {
+  id                String    @id @default(uuid())
+  email             String    @unique
+  password          String
+  firstName         String
+  lastName          String
+  phone             String?
+  role              Role      @default(USER)
+  isActive          Boolean   @default(true)
+  emailVerified      Boolean   @default(false)
+  verificationToken  String?   @db.Text
+  verificationTokenExpiry DateTime?
+  resetToken        String?   @db.Text
+  resetTokenExpiry   DateTime?
+  subscriptionType  String?   // BASIC, PREMIUM, PRO
+  subscriptionExpiresAt DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  lastLogin         DateTime?
+
+  // Relations
+  pets              Pet[]
+  profile           UserProfile?
+  healthRecords      HealthRecord[]
+  messagesSent      Message[]       @relation("MessageSender")
+  messagesReceived  Message[]       @relation("MessageRecipient")
+  conversations    Conversation[]  @relation("ConversationParticipant1")
+  conversations2   Conversation[]  @relation("ConversationParticipant2")
+  files             File[]
+  payments          Payment[]
+  vetServices       VetService[]
+  reviews           VetServiceReview[]
+  location          UserLocation?
+  notifications     Notification[]
+
+  @@map("users")
+}
+
+model UserProfile {
+  id        String   @id @default(uuid())
+  userId     String   @unique
+  bio        String?  @db.Text
+  avatar     String?
+  address    String?
+  city       String?
+  country    String?
+  website    String?
+  socialLinks Json?    // Social media links
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_profiles")
+}
+
+model UserLocation {
+  id        String   @id @default(uuid())
+  userId     String   @unique
+  latitude   Float
+  longitude  Float
+  accuracy   Float?
+  address    String?
+  updatedAt  DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_locations")
+}
+
+// ===========================================
+// PET MODELS
+// ===========================================
+
+model Pet {
+  id          String     @id @default(uuid())
+  name        String
+  type        PetType
+  breed       String
+  age         Int
+  gender      Gender
+  description String?    @db.Text
+  image       String?
+  verified    Boolean    @default(false)
+  status      PetStatus  @default(AVAILABLE)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  location    PetLocation?
+
+  ownerId     String
+  owner       User       @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  // Relations
+  vaccinations    Vaccination[]
+  healthChecks     HealthCheck[]
+  breedingRequests BreedingRequest[]
+  matches          Match[]
+  reviews          PetReview[]
+
+  @@map("pets")
+}
+
+model PetLocation {
+  id        String   @id @default(uuid())
+  petId     String   @unique
+  latitude   Float
+  longitude  Float
+  accuracy   Float?
+  address    String?
+  updatedAt  DateTime @default(now())
+
+  pet Pet @relation(fields: [petId], references: [id], onDelete: Cascade)
+
+  @@map("pet_locations")
+}
+
+model Vaccination {
+  id        String   @id @default(uuid())
+  name      String
+  date      DateTime
+  nextDue   DateTime?
+  notes     String?  @db.Text
+  createdAt DateTime @default(now())
+
+  petId String
+  pet   Pet   @relation(fields: [petId], references: [id], onDelete: Cascade)
+
+  @@map("vaccinations")
+}
+
+model HealthCheck {
+  id           String   @id @default(uuid())
+  date         DateTime
+  veterinarian String
+  notes        String?  @db.Text
+  createdAt    DateTime @default(now())
+
+  petId String
+  pet   Pet   @relation(fields: [petId], references: [id], onDelete: Cascade)
+
+  @@map("health_checks")
+}
+
+// ===========================================
+// HEALTH RECORDS MODELS
+// ===========================================
+
+model HealthRecord {
+  id           String        @id @default(uuid())
+  type         HealthRecordType
+  title        String
+  description  String?       @db.Text
+  veterinarian String
+  clinic       String?
+  date         DateTime
+  nextDue      DateTime?
+  notes        String?       @db.Text
+  attachments  Json[]        @default([])
+  medications  Json[]        @default([])
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  petId String
+  pet   Pet   @relation(fields: [petId], references: [id], onDelete: Cascade)
+
+  @@map("health_records")
+}
+
+// ===========================================
+// MESSAGING MODELS
+// ===========================================
+
+model Message {
+  id         String     @id @default(uuid())
+  content    String     @db.Text
+  type       MessageType @default(TEXT)
+  attachments Json[]     @default([])
+  read       Boolean    @default(false)
+  createdAt  DateTime   @default(now())
+
+  senderId    String
+  recipientId String
+
+  sender    User @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+  recipient User @relation("MessageRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+
+  @@map("messages")
+}
+
+model Conversation {
+  id               String    @id @default(uuid())
+  lastMessageId     String?
+  lastMessageAt     DateTime  @default(now())
+
+  participant1Id String
+  participant2Id String
+
+  participant1 User @relation("ConversationParticipant1", fields: [participant1Id], references: [id], onDelete: Cascade)
+  participant2 User @relation("ConversationParticipant2", fields: [participant2Id], references: [id], onDelete: Cascade)
+
+  lastMessage Message? @relation(fields: [lastMessageId], references: [id])
+
+  @@unique([participant1Id, participant2Id])
+  @@map("conversations")
+}
+
+// ===========================================
+// VET SERVICES MODELS
+// ===========================================
+
+model VetService {
+  id            String      @id @default(uuid())
+  name          String
+  description   String      @db.Text
+  category      VetCategory
+  price         Float
+  duration      Int?        // Duration in minutes
+  location      String
+  contactPhone  String
+  contactEmail  String?
+  website       String?
+  services      Json[]      @default([])
+  workingHours   Json?       // Working hours object
+  images        Json[]      @default([])
+  rating        Float       @default(0)
+  verified      Boolean     @default(false)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  createdBy String
+  creator  User   @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+
+  // Relations
+  reviews VetServiceReview[]
+
+  @@map("vet_services")
+}
+
+model VetServiceReview {
+  id        String   @id @default(uuid())
+  rating    Int      // 1-5 stars
+  comment   String?  @db.Text
+  createdAt DateTime @default(now())
+
+  userId        String
+  vetServiceId  String
+
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  vetService VetService @relation(fields: [vetServiceId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, vetServiceId])
+  @@map("vet_service_reviews")
+}
+
+// ===========================================
+// FILE UPLOAD MODELS
+// ===========================================
+
+model File {
+  id            String     @id @default(uuid())
+  filename      String
+  originalName  String
+  mimeType      String
+  size          Int
+  publicId      String     @db.Text
+  url           String     @db.Text
+  format        String?
+  resourceType   ResourceType @default(IMAGE)
+  folder        String?
+  createdAt     DateTime   @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("files")
+}
+
+// ===========================================
+// PAYMENT MODELS
+// ===========================================
+
+model Payment {
+  id                    String      @id @default(uuid())
+  stripePaymentIntentId String      @unique
+  amount                 Float
+  currency               String
+  status                 PaymentStatus @default(PENDING)
+  planType               String      // BASIC, PREMIUM, PRO, ONE_TIME
+  metadata               Json?
+  stripePaymentMethodId  String?
+  completedAt            DateTime?
+  createdAt              DateTime    @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("payments")
+}
+
+// ===========================================
+// MATCHING & BREEDING MODELS
+// ===========================================
+
+model BreedingRequest {
+  id         String           @id @default(uuid())
+  status     BreedingStatus  @default(PENDING)
+  message    String?          @db.Text
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+
+  requesterPetId String
+  targetPetId    String
+
+  requesterPet Pet @relation("RequesterPet", fields: [requesterPetId], references: [id], onDelete: Cascade)
+  targetPet    Pet @relation("TargetPet", fields: [targetPetId], references: [id], onDelete: Cascade)
+
+  @@map("breeding_requests")
+}
+
+model Match {
+  id         String    @id @default(uuid())
+  score      Float
+  reasons    Json[]    @default([])
+  createdAt  DateTime  @default(now())
+
+  pet1Id String
+  pet2Id String
+
+  pet1 Pet @relation("MatchPet1", fields: [pet1Id], references: [id], onDelete: Cascade)
+  pet2 Pet @relation("MatchPet2", fields: [pet2Id], references: [id], onDelete: Cascade)
+
+  @@unique([pet1Id, pet2Id])
+  @@map("matches")
+}
+
+model PetReview {
+  id        String   @id @default(uuid())
+  rating    Int      // 1-5 stars
+  comment   String?  @db.Text
+  createdAt DateTime @default(now())
+
+  userId String
+  petId  String
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pet  Pet @relation(fields: [petId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, petId])
+  @@map("pet_reviews")
+}
+
+// ===========================================
+// NOTIFICATIONS MODELS
+// ===========================================
+
+model Notification {
+  id        String           @id @default(uuid())
+  title     String
+  message   String           @db.Text
+  type      NotificationType
+  read      Boolean          @default(false)
+  data      Json?            // Additional data
+  createdAt DateTime         @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
+
+// ===========================================
+// ENUMS
+// ===========================================
+
+enum Role {
+  USER
+  ADMIN
+  MODERATOR
+}
+
+enum PetType {
+  DOG
+  CAT
+  BIRD
+}
+
+enum Gender {
+  MALE
+  FEMALE
+}
+
+enum PetStatus {
+  AVAILABLE
+  PENDING
+  ADOPTED
+  UNAVAILABLE
+}
+
+enum HealthRecordType {
+  CHECKUP
+  VACCINATION
+  SURGERY
+  MEDICATION
+  EMERGENCY
+  OTHER
+}
+
+enum MessageType {
+  TEXT
+  IMAGE
+  FILE
+  LOCATION
+}
+
+enum VetCategory {
+  GENERAL
+  SURGERY
+  DENTAL
+  EMERGENCY
+  GROOMING
+  VACCINATION
+  CHECKUP
+}
+
+enum ResourceType {
+  IMAGE
+  VIDEO
+  DOCUMENT
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+enum BreedingStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  COMPLETED
+  CANCELLED
+}
+
+enum NotificationType {
+  MESSAGE
+  MATCH
+  BREEDING_REQUEST
+  PAYMENT_SUCCESS
+  PAYMENT_FAILED
+  HEALTH_REMINDER
+  SYSTEM
+}
