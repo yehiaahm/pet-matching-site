@@ -38,54 +38,7 @@ export const configureSecurityMiddleware = (app) => {
   );
 
   // CORS - Enable Cross-Origin Resource Sharing
-  app.use(
-    cors({
-      origin: (origin, callback) => {
-        // Allow requests with no origin (mobile apps, Postman, curl, etc.)
-        if (!origin) return callback(null, true);
-
-        // Parse allowed origins from config
-        const allowedOrigins = Array.isArray(config.cors.origin) 
-          ? config.cors.origin 
-          : config.cors.origin.split(',').map(o => o.trim());
-
-        // Check if origin is allowed
-        const isAllowed = 
-          allowedOrigins.includes(origin) || 
-          allowedOrigins.includes('*') || 
-          origin.includes('localhost') ||
-          origin.includes('127.0.0.1') ||
-          origin.includes('ngrok.io') || // Allow all ngrok domains
-          // Check for wildcard patterns like https://*.ngrok.io
-          allowedOrigins.some(allowed => {
-            if (allowed.includes('*')) {
-              const pattern = allowed.replace(/\*/g, '[a-z0-9-]+');
-              return new RegExp(`^https?://${pattern}$`).test(origin);
-            }
-            return false;
-          });
-
-        if (isAllowed) {
-          logger.debug(`CORS allowed origin: ${origin}`);
-          callback(null, true);
-        } else {
-          logger.warn(`CORS blocked request from origin: ${origin}`);
-          // In development, still allow but log warning. In production, reject.
-          if (config.isDevelopment) {
-            callback(null, true);
-          } else {
-            callback(new Error('CORS policy violation'));
-          }
-        }
-      },
-      credentials: config.cors.credentials,
-      methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD'],
-      allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
-      exposedHeaders: ['X-Total-Count', 'X-Page-Count'],
-      maxAge: 86400, // 24 hours
-      optionsSuccessStatus: 200, // For legacy browser support
-    })
-  );
+  app.use(cors({ origin: '*' }));
 
   // Rate limiting
   const limiter = rateLimit({

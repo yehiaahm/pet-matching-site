@@ -51,7 +51,13 @@ class JWTAuthService {
   private storageKey = 'petmat_auth';
 
   constructor() {
-    this.baseURL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+    this.baseURL = (typeof window !== 'undefined' && process.env.REACT_APP_API_URL) || 
+                  (typeof window !== 'undefined' && (window as any).location?.origin) ||
+                  'http://localhost:5000';
+    // Remove trailing slash for consistency
+    if (this.baseURL.endsWith('/')) {
+      this.baseURL = this.baseURL.slice(0, -1);
+    }
     this.initializeFromStorage();
   }
 

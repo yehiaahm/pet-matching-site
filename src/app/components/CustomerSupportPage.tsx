@@ -17,6 +17,7 @@ import { Input } from './ui/input';
 import { Textarea } from './ui/textarea';
 import { useLanguage } from '../context/LanguageContext';
 import { toast } from 'sonner';
+import { API_BASE_URL } from '../../lib/api';
 
 interface CustomerSupportPageProps {
   onClose: () => void;
@@ -81,7 +82,7 @@ export function CustomerSupportPage({ onClose }: CustomerSupportPageProps) {
 
       console.log('📤 Sending support ticket:', dataToSend);
 
-      const response = await fetch('http://localhost:3000/api/v1/support/tickets', {
+      const response = await fetch(`${API_BASE_URL}/support/tickets`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

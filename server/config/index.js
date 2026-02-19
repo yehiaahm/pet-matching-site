@@ -14,8 +14,6 @@ dotenv.config({ path: path.join(__dirname, '..', '.env') });
  */
 const validateEnv = () => {
   const required = [
-    'NODE_ENV',
-    'PORT',
     'DATABASE_URL',
     'JWT_SECRET',
     'JWT_REFRESH_SECRET'
@@ -49,7 +47,7 @@ const config = {
   // Server
   server: {
     port: parseInt(process.env.PORT, 10) || 5000,
-    host: process.env.HOST || 'localhost',
+    host: process.env.HOST || '0.0.0.0',
   },
 
   // Database
@@ -67,7 +65,7 @@ const config = {
 
   // CORS
   cors: {
-    origin: process.env.CORS_ORIGIN?.split(',').map(origin => origin.trim()) || ['http://localhost:5173'],
+    origin: process.env.CORS_ORIGIN?.split(',').map(origin => origin.trim()) || ['*'],
     credentials: process.env.CORS_CREDENTIALS === 'true',
   },
 

@@ -17,7 +17,11 @@ export const getApiBaseUrl = (): string => {
     return 'http://localhost:5000/api/v1';
   }
   
-  // في حالة الإنتاج، استخدام URL النسبي
+  // في حالة الإنتاج، استخدام URL النسبي أو origin الحالي
+  if (typeof window !== 'undefined') {
+    return window.location.origin + '/api/v1';
+  }
+  
   return '/api/v1';
 };
 

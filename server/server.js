@@ -41,6 +41,8 @@ mockUsers.set('yehiaahmed195200@gmail.com', adminUser);
 
 // Initialize Express app
 const app = express();
+const PORT = process.env.PORT || config.server.port || 5000;
+const HOST = process.env.HOST || config.server.host || '0.0.0.0';
 
 // Trust proxy (for rate limiting and IP detection behind reverse proxies)
 app.set('trust proxy', 1);
@@ -117,10 +119,10 @@ const startServer = async () => {
     notificationService.init(io);
 
     // Start server
-    const server = httpServer.listen(config.server.port, config.server.host, () => {
+    const server = httpServer.listen(PORT, HOST, () => {
       logger.info(`🚀 Server running in ${config.env} mode`);
-      logger.info(`📡 Listening on http://${config.server.host}:${config.server.port}`);
-      logger.info(`📚 API documentation: http://${config.server.host}:${config.server.port}${config.api.prefix}/${config.api.version}`);
+      logger.info(`📡 Listening on http://${HOST}:${PORT}`);
+      logger.info(`📚 API documentation: http://${HOST}:${PORT}${config.api.prefix}/${config.api.version}`);
       if (!dbConnected) {
         logger.warn('⚠️ Running without database - using mock data');
       }

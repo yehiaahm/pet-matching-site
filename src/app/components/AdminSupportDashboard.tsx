@@ -21,6 +21,7 @@ import { Textarea } from './ui/textarea';
 import { Badge } from './ui/badge';
 import { useLanguage } from '../context/LanguageContext';
 import { toast } from 'sonner';
+import { API_BASE_URL } from '../../lib/api';
 
 interface SupportTicket {
   id: string;
@@ -62,7 +63,7 @@ export function AdminSupportDashboard({ onClose }: AdminSupportDashboardProps) {
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:3000/api/v1/support/admin/tickets', {
+      const response = await fetch(`${API_BASE_URL}/support/admin/tickets`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -125,7 +126,7 @@ export function AdminSupportDashboard({ onClose }: AdminSupportDashboardProps) {
     try {
       const token = localStorage.getItem('token');
       const response = await fetch(
-        `http://localhost:3000/api/v1/support/tickets/${selectedTicket.id}/reply`,
+        `${API_BASE_URL}/support/tickets/${selectedTicket.id}/reply`,
         {
           method: 'POST',
           headers: {
@@ -167,7 +168,7 @@ export function AdminSupportDashboard({ onClose }: AdminSupportDashboardProps) {
     try {
       const token = localStorage.getItem('token');
       const response = await fetch(
-        `http://localhost:3000/api/v1/support/admin/tickets/${ticketId}/status`,
+        `${API_BASE_URL}/support/admin/tickets/${ticketId}/status`,
         {
           method: 'PATCH',
           headers: {
