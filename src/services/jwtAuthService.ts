@@ -51,13 +51,28 @@ class JWTAuthService {
   private storageKey = 'petmat_auth';
 
   constructor() {
-    this.baseURL = (typeof window !== 'undefined' && process.env.REACT_APP_API_URL) || 
-                  (typeof window !== 'undefined' && (window as any).location?.origin) ||
-                  'http://localhost:5000';
+    // استخدام VITE_API_BASE أولاً (Vite) ثم REACT_APP_API_URL (fallback)
+    const viteApiBase = import.meta.env.VITE_API_BASE;
+    const reactApiUrl = process.env.REACT_APP_API_URL;
+    
+    if (viteApiBase) {
+      // إزالة /api/v1 إذا كان موجوداً لأن axios سيضيفها
+      this.baseURL = viteApiBase.replace(/\/api\/v1$/, '');
+    } else if (reactApiUrl) {
+      this.baseURL = reactApiUrl;
+    } else if (typeof window !== 'undefined') {
+      // Fallback للـ production
+      this.baseURL = 'https://pet-matching-site.onrender.com';
+    } else {
+      this.baseURL = 'http://localhost:5000';
+    }
+    
     // Remove trailing slash for consistency
     if (this.baseURL.endsWith('/')) {
       this.baseURL = this.baseURL.slice(0, -1);
     }
+    
+    console.log('🔐 JWTAuthService baseURL:', this.baseURL);
     this.initializeFromStorage();
   }
 

@@ -5,24 +5,23 @@
 
 // الحصول على URL الأساسي للـ API
 export const getApiBaseUrl = (): string => {
-  // أولاً: نتحقق من متغير البيئة
+  // أولاً: نتحقق من متغير البيئة (أهم خطوة!)
   const envApiBase = import.meta.env.VITE_API_BASE;
   
   if (envApiBase) {
+    console.log('✅ Using API from VITE_API_BASE:', envApiBase);
     return envApiBase;
   }
   
   // ثانياً: استخدام القيمة الافتراضية حسب البيئة
   if (import.meta.env.DEV) {
+    console.log('🔧 DEV mode: Using localhost');
     return 'http://localhost:5000/api/v1';
   }
   
-  // في حالة الإنتاج، استخدام URL النسبي أو origin الحالي
-  if (typeof window !== 'undefined') {
-    return window.location.origin + '/api/v1';
-  }
-  
-  return '/api/v1';
+  // في حالة الإنتاج بدون متغير بيئة (لا يُنصح به)
+  console.warn('⚠️ No VITE_API_BASE found, using fallback');
+  return 'https://pet-matching-site.onrender.com/api/v1';
 };
 
 // تصدير URL الثابت
