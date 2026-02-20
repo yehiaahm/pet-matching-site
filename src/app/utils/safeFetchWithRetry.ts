@@ -24,6 +24,31 @@ interface SafeFetchResponse<T> {
   retryCount?: number;
 }
 
+const isAbsoluteUrl = (url: string): boolean => /^https?:\/\//i.test(url);
+
+const resolveRequestUrl = (url: string): string => {
+  if (isAbsoluteUrl(url) || !url.startsWith('/api')) {
+    return url;
+  }
+
+  if (import.meta.env.DEV) {
+    return url;
+  }
+
+  const envApiBase = (import.meta.env.VITE_API_BASE as string | undefined)?.trim();
+
+  if (!envApiBase) {
+    return url;
+  }
+
+  try {
+    const baseOrigin = new URL(envApiBase).origin;
+    return `${baseOrigin}${url}`;
+  } catch {
+    return url;
+  }
+};
+
 const DEFAULT_RETRY_CONFIG: RetryConfig = {
   maxRetries: 3,
   retryDelay: 1000,
@@ -63,7 +88,9 @@ export async function safeFetchWithRetry<T = any>(
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), timeout);
 
-      const response = await fetch(url, {
+      const requestUrl = resolveRequestUrl(url);
+
+      const response = await fetch(requestUrl, {
         ...fetchOptions,
         signal: controller.signal
       });

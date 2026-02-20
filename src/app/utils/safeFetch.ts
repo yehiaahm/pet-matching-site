@@ -18,6 +18,31 @@ interface SafeFetchResponse<T> {
   errorData?: any;
 }
 
+const isAbsoluteUrl = (url: string): boolean => /^https?:\/\//i.test(url);
+
+const resolveRequestUrl = (url: string): string => {
+  if (isAbsoluteUrl(url) || !url.startsWith('/api')) {
+    return url;
+  }
+
+  if (import.meta.env.DEV) {
+    return url;
+  }
+
+  const envApiBase = (import.meta.env.VITE_API_BASE as string | undefined)?.trim();
+
+  if (!envApiBase) {
+    return url;
+  }
+
+  try {
+    const baseOrigin = new URL(envApiBase).origin;
+    return `${baseOrigin}${url}`;
+  } catch {
+    return url;
+  }
+};
+
 /**
  * Safe fetch wrapper that handles empty responses and JSON parsing errors
  * Also handles HTTP 429 (Too Many Requests) with appropriate messaging
@@ -35,7 +60,9 @@ export async function safeFetch<T = any>(
 
     const headers = { ...options.headers } as Record<string, string>;
 
-    const response = await fetch(url, {
+    const requestUrl = resolveRequestUrl(url);
+
+    const response = await fetch(requestUrl, {
       ...fetchOptions,
       headers,
       credentials: 'include', // Automatically send cookies
