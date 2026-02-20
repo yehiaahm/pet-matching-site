@@ -39,11 +39,8 @@ export const configureSecurityMiddleware = (app) => {
 
   // CORS - Enable Cross-Origin Resource Sharing
   app.use(cors({
-    origin: [
-      'https://pet-matching-site.vercel.app',
-      'https://pet-matching-site-git-main-yehiaahms-projects.vercel.app',
-      'http://localhost:5173'
-    ],
+    origin: '*',
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
     credentials: true
   }));
 
