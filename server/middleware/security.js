@@ -39,9 +39,9 @@ export const configureSecurityMiddleware = (app) => {
 
   // CORS - Enable Cross-Origin Resource Sharing
   app.use(cors({
-    origin: '*',
-    methods: ['GET', 'POST', 'PUT', 'DELETE'],
-    credentials: true
+    origin: config.cors.origin,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    credentials: config.cors.credentials
   }));
 
   // Rate limiting
