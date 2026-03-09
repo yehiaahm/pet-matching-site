@@ -1,0 +1,615 @@
+// This is your Prisma schema file,
+// learn more about it in docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User management
+model User {
+  id            String   @id @default(uuid())
+  email         String   @unique
+  passwordHash  String   @map("password_hash")
+  firstName     String   @map("first_name")
+  lastName      String   @map("last_name")
+  phone         String?
+  avatarUrl     String?  @map("avatar_url")
+  role          UserRole @default(USER)
+  emailVerified Boolean  @default(false) @map("email_verified")
+  isActive      Boolean  @default(true) @map("is_active")
+  lastLoginAt   DateTime? @map("last_login_at")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  pets               Pet[]
+  initiatedRequests  BreedingRequest[] @relation("BreedingRequestInitiator")
+  receivedRequests   BreedingRequest[] @relation("BreedingRequestTarget")
+  sentMessages       Message[]          @relation("MessageSender")
+  conversations     Conversation[]     @relation("UserConversations")
+  sentReviews       Review[]           @relation("ReviewSender")
+  receivedReviews   Review[]           @relation("ReviewReceiver")
+  payments           Payment[]
+  refreshTokens      RefreshToken[]
+  sentLikes          PetLike[]          @relation("LikeSender")
+  receivedLikes      PetLike[]          @relation("LikeReceiver")
+  subscriptions      Subscription[]
+  verifications      Verification[]
+  aiRecommendations  AIRecommendation[]
+  productReviews     ProductReview[]     @relation("ProductReviewUser")
+  orders            Order[]            @relation("UserOrders")
+  wishlistItems      WishlistItem[]      @relation("UserWishlist")
+
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String   @map("user_id")
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("refresh_tokens")
+}
+
+// Pet management
+model Pet {
+  id               String     @id @default(uuid())
+  ownerId          String     @map("owner_id")
+  name             String
+  species          Species
+  breed            String
+  gender           Gender
+  age              Int
+  weight           Float?
+  description      String?
+  status           PetStatus  @default(AVAILABLE)
+  location         Json?       // { lat: number, lng: number, address: string }
+  vaccinated       Boolean    @default(false)
+  healthCertified  Boolean    @default(false) @map("health_certified")
+  price            Float?
+  avatarUrl        String?    @map("avatar_url")
+  birthDate        DateTime?  @map("birth_date")
+  registrationNo   String?    @map("registration_no")
+  microchipNo      String?    @map("microchip_no")
+  createdAt        DateTime   @default(now()) @map("created_at")
+  updatedAt        DateTime   @updatedAt @map("updated_at")
+
+  // Relations
+  owner           User            @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  photos          PetPhoto[]
+  healthRecords   HealthRecord[]
+  initiatedRequests BreedingRequest[] @relation("BreedingRequestInitiatorPet")
+  targetRequests  BreedingRequest[] @relation("BreedingRequestTargetPet")
+  matchesAsPet1   Match[]           @relation("MatchPet1")
+  matchesAsPet2   Match[]           @relation("MatchPet2")
+  sentLikes       PetLike[]         @relation("LikeFrom")
+  receivedLikes   PetLike[]         @relation("LikeTo")
+  compatibilitiesAsPet1 Compatibility[] @relation("CompatibilityPet1")
+  compatibilitiesAsPet2 Compatibility[] @relation("CompatibilityPet2")
+  boosts          PetBoost[]
+  aiRecommendations AIRecommendation[]
+
+  @@map("pets")
+}
+
+model PetPhoto {
+  id     String @id @default(uuid())
+  petId  String @map("pet_id")
+  url    String
+  isMain Boolean @default(false) @map("is_main")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  pet Pet @relation(fields: [petId], references: [id], onDelete: Cascade)
+
+  @@map("pet_photos")
+}
+
+// Health records
+model HealthRecord {
+  id               String   @id @default(uuid())
+  petId            String   @map("pet_id")
+  recordType       String   @map("record_type")
+  description      String
+  documentUrl      String?  @map("document_url")
+  examinationDate  DateTime @map("examination_date")
+  veterinarianName String   @map("veterinarian_name")
+  clinicName       String?  @map("clinic_name")
+  nextVisitDate    DateTime? @map("next_visit_date")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  pet Pet @relation(fields: [petId], references: [id], onDelete: Cascade)
+
+  @@map("health_records")
+}
+
+// Breeding requests
+model BreedingRequest {
+  id              String            @id @default(uuid())
+  initiatorId     String            @map("initiator_id")
+  targetUserId    String            @map("target_user_id")
+  initiatorPetId  String            @map("initiator_pet_id")
+  targetPetId     String            @map("target_pet_id")
+  status          BreedingStatus    @default(PENDING)
+  message         String?
+  requestedDate   DateTime          @default(now()) @map("requested_date")
+  preferredDate   DateTime?         @map("preferred_date")
+  estimatedDelivery DateTime?       @map("estimated_delivery")
+  rejectionReason String?           @map("rejection_reason")
+  createdAt       DateTime          @default(now()) @map("created_at")
+  updatedAt       DateTime          @updatedAt @map("updated_at")
+
+  // Relations
+  initiator    User  @relation("BreedingRequestInitiator", fields: [initiatorId], references: [id], onDelete: Cascade)
+  targetUser   User  @relation("BreedingRequestTarget", fields: [targetUserId], references: [id], onDelete: Cascade)
+  initiatorPet Pet   @relation("BreedingRequestInitiatorPet", fields: [initiatorPetId], references: [id], onDelete: Cascade)
+  targetPet    Pet   @relation("BreedingRequestTargetPet", fields: [targetPetId], references: [id], onDelete: Cascade)
+  matches      Match[]
+  messages     Message[]          @relation("BreedingRequestMessages")
+  payments     Payment[]
+
+  @@unique([initiatorId, initiatorPetId, targetUserId, targetPetId])
+  @@map("breeding_requests")
+}
+
+// Matching system
+model Match {
+  id                 String    @id @default(uuid())
+  breedingRequestId  String    @map("breeding_request_id")
+  pet1Id             String    @map("pet1_id")
+  pet2Id             String    @map("pet2_id")
+  compatibilityScore Float     @map("compatibility_score")
+  matchFactors       Json      @map("match_factors") // { breed: 0.3, age: 0.2, location: 0.3, health: 0.2 }
+  status             MatchStatus @default(PENDING)
+  confirmedAt        DateTime? @map("confirmed_at")
+  completedAt        DateTime? @map("completed_at")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  breedingRequest BreedingRequest @relation(fields: [breedingRequestId], references: [id], onDelete: Cascade)
+  pet1            Pet             @relation("MatchPet1", fields: [pet1Id], references: [id], onDelete: Cascade)
+  pet2            Pet             @relation("MatchPet2", fields: [pet2Id], references: [id], onDelete: Cascade)
+  conversation    Conversation?
+
+  @@map("matches")
+}
+
+// Payment system
+model Payment {
+  id               String        @id @default(uuid())
+  userId           String        @map("user_id")
+  breedingRequestId String?      @map("breeding_request_id")
+  amount           Float
+  currency         String        @default("USD")
+  paymentMethod    PaymentMethod @map("payment_method")
+  status           PaymentStatus @default(PENDING)
+  transactionId    String?       @map("transaction_id")
+  screenshotUrl    String?       @map("screenshot_url")
+  description      String?
+  metadata         Json?         // Additional payment data
+  confirmedAt      DateTime?     @map("confirmed_at")
+  rejectedAt       DateTime?     @map("rejected_at")
+  rejectionReason  String?       @map("rejection_reason")
+  createdAt        DateTime      @default(now()) @map("created_at")
+  updatedAt        DateTime      @updatedAt @map("updated_at")
+
+  // Relations
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  breedingRequest BreedingRequest? @relation(fields: [breedingRequestId], references: [id], onDelete: Cascade)
+  subscription    Subscription?    @relation("SubscriptionPayment")
+  order           Order?          @relation("OrderPayment")
+
+  @@map("payments")
+}
+
+// Review system
+model Review {
+  id           String     @id @default(uuid())
+  reviewerId   String     @map("reviewer_id")
+  reviewedId   String     @map("reviewed_id")
+  breedingRequestId String? @map("breeding_request_id")
+  rating       Int        // 1-5 stars
+  title        String?
+  content      String
+  isPublic     Boolean    @default(true) @map("is_public")
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
+
+  // Relations
+  reviewer User @relation("ReviewSender", fields: [reviewerId], references: [id], onDelete: Cascade)
+  reviewed User @relation("ReviewReceiver", fields: [reviewedId], references: [id], onDelete: Cascade)
+
+  @@unique([reviewerId, reviewedId, breedingRequestId])
+  @@map("reviews")
+}
+
+// Tinder-like Likes System 🔥
+model PetLike {
+  id        String   @id @default(uuid())
+  fromPetId String   @map("from_pet_id")
+  toPetId   String   @map("to_pet_id")
+  fromUserId String? @map("from_user_id")
+  toUserId   String? @map("to_user_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  fromPet Pet @relation("LikeFrom", fields: [fromPetId], references: [id], onDelete: Cascade)
+  toPet   Pet @relation("LikeTo", fields: [toPetId], references: [id], onDelete: Cascade)
+  fromUser User? @relation("LikeSender", fields: [fromUserId], references: [id], onDelete: Cascade)
+  toUser   User? @relation("LikeReceiver", fields: [toUserId], references: [id], onDelete: Cascade)
+
+  @@unique([fromPetId, toPetId])
+  @@map("pet_likes")
+}
+
+// AI Compatibility Scoring 🤖
+model Compatibility {
+  id        String   @id @default(uuid())
+  pet1Id    String   @map("pet1_id")
+  pet2Id    String   @map("pet2_id")
+  score     Float    @map("compatibility_score") // 0.0 to 1.0
+  factors   Json     @map("match_factors") // { breed: 0.3, age: 0.2, location: 0.3, health: 0.2 }
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  pet1 Pet @relation("CompatibilityPet1", fields: [pet1Id], references: [id], onDelete: Cascade)
+  pet2 Pet @relation("CompatibilityPet2", fields: [pet2Id], references: [id], onDelete: Cascade)
+
+  @@unique([pet1Id, pet2Id])
+  @@map("compatibilities")
+}
+
+// Pet Boost System 💰
+model PetBoost {
+  id        String   @id @default(uuid())
+  petId     String   @map("pet_id")
+  boostedAt DateTime @default(now()) @map("boosted_at")
+  expiresAt DateTime @map("expires_at")
+  isActive  Boolean  @default(true) @map("is_active")
+  boostType BoostType @default(VISIBILITY) @map("boost_type")
+
+  // Relations
+  pet Pet @relation(fields: [petId], references: [id], onDelete: Cascade)
+
+  @@map("pet_boosts")
+}
+
+// Conversation System 💬
+model Conversation {
+  id         String         @id @default(uuid())
+  matchId    String         @map("match_id") @unique
+  createdAt  DateTime       @default(now()) @map("created_at")
+  updatedAt  DateTime       @updatedAt @map("updated_at")
+  lastMessageAt DateTime?    @map("last_message_at")
+  isActive   Boolean        @default(true) @map("is_active")
+
+  // Relations
+  match    Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  messages Message[]
+  user     User?    @relation("UserConversations", fields: [userId], references: [id])
+  userId   String?  @map("user_id")
+
+  @@map("conversations")
+}
+
+// Enhanced Message System
+model Message {
+  id             String      @id @default(uuid())
+  conversationId String      @map("conversation_id")
+  senderId       String      @map("sender_id")
+  content        String
+  messageType    MessageType @default(TEXT)
+  attachmentUrl  String?     @map("attachment_url")
+  isRead         Boolean     @default(false) @map("is_read")
+  readAt         DateTime?   @map("read_at")
+  parentMessageId String?    @map("parent_message_id")
+  createdAt      DateTime    @default(now()) @map("created_at")
+  updatedAt      DateTime    @updatedAt @map("updated_at")
+
+  // Relations
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender       User         @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+  parentMessage Message?     @relation("MessageThread", fields: [parentMessageId], references: [id])
+  replies      Message[]    @relation("MessageThread")
+  breedingRequest BreedingRequest? @relation("BreedingRequestMessages", fields: [breedingRequestId], references: [id])
+  breedingRequestId String? @map("breeding_request_id")
+
+  @@map("messages")
+}
+
+// Subscription System 💰
+model Subscription {
+  id          String           @id @default(uuid())
+  userId      String           @map("user_id")
+  planType    SubscriptionPlan @map("plan_type")
+  status      SubscriptionStatus @default(ACTIVE)
+  startedAt   DateTime         @default(now()) @map("started_at")
+  expiresAt   DateTime         @map("expires_at")
+  autoRenew   Boolean          @default(true) @map("auto_renew")
+  paymentId   String?          @map("payment_id") @unique
+  features    Json             @map("features") // { unlimited_likes: true, boost_count: 5, ... }
+  createdAt   DateTime         @default(now()) @map("created_at")
+  updatedAt   DateTime         @updatedAt @map("updated_at")
+
+  // Relations
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  payment Payment? @relation("SubscriptionPayment", fields: [paymentId], references: [id])
+
+  @@map("subscriptions")
+}
+
+// Verification System 🔐
+model Verification {
+  id           String   @id @default(uuid())
+  userId       String   @map("user_id")
+  documentType String   @map("document_type") // ID, VET_CERT, PEDIGREE, etc.
+  documentUrl  String   @map("document_url")
+  status       VerificationStatus @default(PENDING)
+  submittedAt  DateTime @default(now()) @map("submitted_at")
+  reviewedAt   DateTime? @map("reviewed_at")
+  reviewedBy   String?  @map("reviewed_by") // Admin ID
+  rejectionReason String? @map("rejection_reason")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("verifications")
+}
+
+// Enums
+enum UserRole {
+  USER
+  ADMIN
+  SUPER_ADMIN
+}
+
+enum Species {
+  DOG
+  CAT
+  BIRD
+  RABBIT
+  OTHER
+}
+
+enum Gender {
+  MALE
+  FEMALE
+}
+
+enum PetStatus {
+  AVAILABLE
+  UNAVAILABLE
+  PENDING
+  RETIRED
+}
+
+enum BreedingStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  COMPLETED
+  CANCELLED
+}
+
+enum MatchStatus {
+  PENDING
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+}
+
+enum PaymentMethod {
+  CREDIT_CARD
+  INSTAPAY
+  PAYPAL
+  CASH
+}
+
+enum PaymentStatus {
+  PENDING
+  CONFIRMED
+  REJECTED
+  REFUNDED
+}
+
+enum MessageType {
+  TEXT
+  IMAGE
+  DOCUMENT
+  SYSTEM
+}
+
+enum BoostType {
+  VISIBILITY
+  SUPER_LIKE
+  TOP_PROFILE
+  UNLIMITED_SWIPES
+}
+
+enum SubscriptionPlan {
+  FREE
+  BASIC
+  PREMIUM
+  VIP
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  EXPIRED
+  CANCELLED
+  SUSPENDED
+}
+
+enum VerificationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  EXPIRED
+}
+
+enum OrderStatus {
+  PENDING
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+  REFUNDED
+}
+
+// AI Pet Shop Recommendations System 🛍️
+model Product {
+  id          String   @id @default(uuid())
+  name        String
+  description String
+  price       Float
+  categoryId  String   @map("category_id")
+  subcategory String?  @map("subcategory_id")
+  brand       String?
+  imageUrl    String?  @map("image_url")
+  images      Json?    // Multiple images
+  specifications Json?  // Product details
+  tags        String[] // Search tags
+  rating      Float    @default(0)
+  reviewCount Int      @default(0) @map("review_count")
+  stock       Int      @default(0)
+  isActive    Boolean  @default(true) @map("is_active")
+  isFeatured  Boolean  @default(false) @map("is_featured")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  category        ProductCategory @relation(fields: [categoryId], references: [id])
+  recommendations  AIRecommendation[]
+  reviews         ProductReview[]
+  orderItems      OrderItem[]
+  wishlists       WishlistItem[]
+
+  @@map("products")
+}
+
+model ProductCategory {
+  id          String @id @default(uuid())
+  name        String
+  description String?
+  icon        String?
+  parentId    String? @map("parent_id")
+  sortOrder   Int     @default(0) @map("sort_order")
+  isActive    Boolean @default(true) @map("is_active")
+
+  // Relations
+  parent   ProductCategory?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children ProductCategory[] @relation("CategoryHierarchy")
+  products Product[]
+
+  @@map("product_categories")
+}
+
+model AIRecommendation {
+  id        String   @id @default(uuid())
+  petId      String   @map("pet_id")
+  productId  String   @map("product_id")
+  userId     String   @map("user_id")
+  score      Float    // AI confidence score 0-1
+  reason     String?  // Why this was recommended
+  context    String?  // Context of recommendation
+  isClicked   Boolean  @default(false) @map("is_clicked")
+  isPurchased Boolean  @default(false) @map("is_purchased")
+  createdAt  DateTime @default(now()) @map("created_at")
+  expiresAt  DateTime @map("expires_at")
+
+  // Relations
+  pet     Pet     @relation(fields: [petId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([petId, productId, userId])
+  @@map("ai_recommendations")
+}
+
+model ProductReview {
+  id        String   @id @default(uuid())
+  productId String   @map("product_id")
+  userId    String   @map("user_id")
+  rating    Int      // 1-5 stars
+  title     String?
+  content   String
+  imageUrl  String?  @map("image_url")
+  isVerified Boolean  @default(false) @map("is_verified")
+  helpfulCount Int    @default(0) @map("helpful_count")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user    User    @relation("ProductReviewUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, userId])
+  @@map("product_reviews")
+}
+
+model Order {
+  id            String      @id @default(uuid())
+  userId        String      @map("user_id")
+  orderNumber   String      @unique @map("order_number")
+  status        OrderStatus @default(PENDING)
+  subtotal      Float
+  tax           Float       @default(0)
+  shipping      Float       @default(0)
+  total         Float
+  currency      String      @default("USD")
+  paymentMethod String      @map("payment_method")
+  paymentId     String?     @map("payment_id") @unique
+  shippingAddress Json      @map("shipping_address")
+  trackingNumber String?     @map("tracking_number")
+  estimatedDelivery DateTime?  @map("estimated_delivery")
+  deliveredAt   DateTime?   @map("delivered_at")
+  createdAt     DateTime     @default(now()) @map("created_at")
+  updatedAt     DateTime     @updatedAt @map("updated_at")
+
+  // Relations
+  user       User        @relation("UserOrders", fields: [userId], references: [id], onDelete: Cascade)
+  items      OrderItem[]
+  payment    Payment?    @relation("OrderPayment", fields: [paymentId], references: [id])
+
+  @@map("orders")
+}
+
+model OrderItem {
+  id        String @id @default(uuid())
+  orderId   String @map("order_id")
+  productId String @map("product_id")
+  quantity  Int
+  unitPrice Float  @map("unit_price")
+  totalPrice Float @map("total_price")
+
+  // Relations
+  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@map("order_items")
+}
+
+model WishlistItem {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  productId String   @map("product_id")
+  addedAt   DateTime @default(now()) @map("added_at")
+
+  // Relations
+  user    User    @relation("UserWishlist", fields: [userId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, productId])
+  @@map("wishlist_items")
+}

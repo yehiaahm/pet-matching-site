@@ -27,12 +27,27 @@ import { AdminSupportDashboard } from './components/AdminSupportDashboard';
 import { AdminDashboard } from './components/admin/AdminDashboard';
 import { PetMatAIControlPanel } from './components/PetMatAIControlPanel';
 import ProtectedRoute from './components/ProtectedRoute';
+import SellerOnlyRoute from './components/SellerOnlyRoute';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import Dashboard from './pages/Dashboard';
 import AIMatchingPage from './pages/AIMatchingPage';
+import AIShoppingRecommendationsPage from './pages/AIShoppingRecommendationsPage';
 import FeaturesShowcasePage from './pages/FeaturesShowcasePage';
 import NotificationsCenter from './pages/NotificationsCenter';
+import { AdminPaymentsPage } from './pages/AdminPaymentsPage';
+import SubscriptionPaymentResultPage from './pages/SubscriptionPaymentResultPage';
+import PaymentCheckoutPage from './pages/PaymentCheckoutPage';
+import MarketplacePage from './pages/MarketplacePage';
+import MarketplaceCartPage from './pages/MarketplaceCartPage';
+import MarketplaceSellerPage from './pages/MarketplaceSellerPage';
+import SuperAdminPanelPage from './pages/SuperAdminPanelPage';
+import AdminSupportPage from './pages/AdminSupportPage';
+import VetClinicsPage from './pages/VetClinicsPage';
+import CommunitySupportPage from './pages/CommunitySupportPage';
+import CommunitySupportChatPage from './pages/CommunitySupportChatPage';
+import { SystemAlertBanner } from './components/SystemAlertBanner';
+import { AIPopupChatbot } from './components/AIPopupChatbot';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import ProfileVerificationPage from './pages/ProfileVerificationPage';
 import BreedingRequests from './components/BreedingRequests';
@@ -55,6 +70,7 @@ import { pageVariants, containerVariants, itemVariants } from '../lib/animations
 
 export interface Pet {
   id: string;
+  ownerId?: string;
   name: string;
   type: 'dog' | 'cat' | 'bird';
   breed: string;
@@ -77,6 +93,14 @@ export interface Pet {
   healthCheck: {
     date: string;
     veterinarian: string;
+  };
+  aiHealthRecommendation?: {
+    needsVaccination: boolean;
+    needsVetVisit: boolean;
+    urgency: 'LOW' | 'MEDIUM' | 'HIGH';
+    reasons: string[];
+    suggestedActions: string[];
+    generatedAt: string;
   };
   description: string;
   verified: boolean;
@@ -141,7 +165,7 @@ export default function App() {
         // GPS matching functionality
         break;
       case 'health':
-        // Health records functionality
+        navigate('/health-records');
         break;
       case 'community':
         setShowMessages(true);
@@ -190,6 +214,7 @@ export default function App() {
       <PremiumFeaturesProvider>
         <LanguageProvider>
           <ThemeProvider>
+            <SystemAlertBanner />
             <Routes>
               {/* Public Routes */}
               <Route path="/" element={<LandingPage />} />
@@ -237,11 +262,27 @@ export default function App() {
                   </ProtectedRoute>
                 } 
               />
+              <Route
+                path="/ai-shopping-recommendations"
+                element={
+                  <ProtectedRoute>
+                    <AIShoppingRecommendationsPage />
+                  </ProtectedRoute>
+                }
+              />
               <Route 
                 path="/ai-dashboard" 
                 element={
-                  <ProtectedRoute>
+                  <ProtectedRoute allowedRoles={['admin', 'moderator', 'super_admin']}>
                     <PetMatAIControlPanel />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/admin/payments" 
+                element={
+                  <ProtectedRoute>
+                    <AdminPaymentsPage />
                   </ProtectedRoute>
                 } 
               />
@@ -253,6 +294,96 @@ export default function App() {
                   </ProtectedRoute>
                 } 
               />
+              <Route
+                path="/vet-clinics"
+                element={
+                  <ProtectedRoute>
+                    <VetClinicsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/health-records"
+                element={
+                  <ProtectedRoute>
+                    <HealthRecords />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/gps-proximity"
+                element={
+                  <ProtectedRoute>
+                    <GPSMatching />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/community-support"
+                element={
+                  <ProtectedRoute>
+                    <CommunitySupportPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/community-support/chat"
+                element={
+                  <ProtectedRoute>
+                    <CommunitySupportChatPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/marketplace"
+                element={
+                  <ProtectedRoute>
+                    <MarketplacePage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/marketplace/cart"
+                element={
+                  <ProtectedRoute>
+                    <MarketplaceCartPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/marketplace/seller"
+                element={
+                  <ProtectedRoute>
+                    <SellerOnlyRoute>
+                      <MarketplaceSellerPage />
+                    </SellerOnlyRoute>
+                  </ProtectedRoute>
+                }
+              />
+              <Route 
+                path="/subscription/success" 
+                element={
+                  <ProtectedRoute>
+                    <SubscriptionPaymentResultPage mode="success" />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/subscription/cancel" 
+                element={
+                  <ProtectedRoute>
+                    <SubscriptionPaymentResultPage mode="cancel" />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route
+                path="/payment"
+                element={
+                  <ProtectedRoute>
+                    <PaymentCheckoutPage />
+                  </ProtectedRoute>
+                }
+              />
               
               {/* Admin Routes - Require authentication */}
               <Route 
@@ -263,6 +394,22 @@ export default function App() {
                   </ProtectedRoute>
                 } 
               />
+              <Route
+                path="/admin/support"
+                element={
+                  <ProtectedRoute allowedRoles={['admin', 'super_admin']}>
+                    <AdminSupportPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/super-admin"
+                element={
+                  <ProtectedRoute allowedRoles={['admin', 'super_admin']}>
+                    <SuperAdminPanelPage />
+                  </ProtectedRoute>
+                }
+              />
               
               {/* Public Showcase Routes */}
               <Route path="/showcase" element={<FeaturesShowcasePage />} />
@@ -272,6 +419,7 @@ export default function App() {
               {/* Catch All - Redirect to home */}
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
+            <AIPopupChatbot />
           </ThemeProvider>
         </LanguageProvider>
       </PremiumFeaturesProvider>

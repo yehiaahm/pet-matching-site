@@ -1,6 +1,11 @@
-const { PrismaClient } = require('@prisma/client');
+let PrismaClient;
+try {
+  ({ PrismaClient } = require('@prisma/client'));
+} catch (error) {
+  ({ PrismaClient } = require('../../server/node_modules/@prisma/client'));
+}
 const bcrypt = require('bcryptjs');
-const Redis = require('ioredis');
+const Redis = require('ioredis-mock');
 
 class TestDatabase {
   constructor() {
@@ -21,7 +26,7 @@ class TestDatabase {
 
   async connect() {
     await this.prisma.$connect();
-    await this.redis.connect();
+    await this.redis.ping();
   }
 
   async disconnect() {
@@ -52,13 +57,21 @@ class TestDatabase {
 
     // Reset sequences
     try {
-      await this.prisma.$executeRawUnsafe(`
-        SELECT setval(pg_get_serial_sequence('"User"', 'id'), 1, false);
-        SELECT setval(pg_get_serial_sequence('"Pet"', 'id'), 1, false);
-        SELECT setval(pg_get_serial_sequence('"PetMatch"', 'id'), 1, false);
-        SELECT setval(pg_get_serial_sequence('"RefreshToken"', 'id'), 1, false);
-        SELECT setval(pg_get_serial_sequence('"SupportTicket"', 'id'), 1, false);
-      `);
+      const sequenceResets = [
+        `SELECT setval(pg_get_serial_sequence('"User"', 'id'), 1, false);`,
+        `SELECT setval(pg_get_serial_sequence('"Pet"', 'id'), 1, false);`,
+        `SELECT setval(pg_get_serial_sequence('"PetMatch"', 'id'), 1, false);`,
+        `SELECT setval(pg_get_serial_sequence('"RefreshToken"', 'id'), 1, false);`,
+        `SELECT setval(pg_get_serial_sequence('"SupportTicket"', 'id'), 1, false);`,
+      ];
+
+      for (const query of sequenceResets) {
+        try {
+          await this.prisma.$executeRawUnsafe(query);
+        } catch (sequenceError) {
+          console.warn('Could not reset a sequence:', sequenceError.message);
+        }
+      }
     } catch (error) {
       console.warn('Could not reset sequences:', error.message);
     }

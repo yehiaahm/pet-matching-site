@@ -1,12 +1,48 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import VerificationBadgeComponent from '../components/VerificationBadge';
 import InstantAlerts from '../components/InstantAlerts';
+import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 
 export default function FeaturesShowcasePage() {
   const { user, token } = useAuth();
   const apiBase = import.meta.env.VITE_API_BASE || '/api/v1';
+  const navigate = useNavigate();
+
+  const quickFeatures = [
+    {
+      key: 'ai',
+      title: 'AI Matching',
+      desc: 'مطابقة ذكية للحيوانات الأليفة باستخدام الذكاء الاصطناعي.',
+      path: '/ai',
+    },
+    {
+      key: 'gps',
+      title: 'GPS Proximity',
+      desc: 'تطابق جغرافي حسب الموقع والمسافة القريبة.',
+      path: '/gps-proximity',
+    },
+    {
+      key: 'community',
+      title: 'Community Support',
+      desc: 'الدعم المجتمعي والتواصل مع باقي المستخدمين.',
+      path: '/community-support',
+    },
+    {
+      key: 'clinics',
+      title: 'Vet Clinics Booking',
+      desc: 'حجز العيادات البيطرية وإدارة الزيارات.',
+      path: '/vet-clinics',
+    },
+    {
+      key: 'health',
+      title: 'Health Records',
+      desc: 'سجل صحي كامل للحيوان الأليف والتطعيمات.',
+      path: '/health-records',
+    },
+  ];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 p-8">
@@ -15,6 +51,25 @@ export default function FeaturesShowcasePage() {
           <h1 className="text-4xl font-bold text-gray-900 mb-2">ميزات الذكاء الاصطناعي 🤖</h1>
           <p className="text-lg text-gray-600">نظام المطابقة الذكية والتنبيهات الفورية</p>
         </div>
+
+        <Card className="border-slate-200 shadow-lg">
+          <CardHeader className="bg-slate-50 border-b border-slate-200">
+            <CardTitle className="text-slate-900">المميزات الأساسية الشغالة الآن</CardTitle>
+          </CardHeader>
+          <CardContent className="pt-6">
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {quickFeatures.map((feature) => (
+                <div key={feature.key} className="rounded-xl border border-slate-200 p-4 bg-white">
+                  <h3 className="text-base font-semibold text-slate-900 mb-2">{feature.title}</h3>
+                  <p className="text-sm text-slate-600 mb-4">{feature.desc}</p>
+                  <Button className="w-full" onClick={() => navigate(feature.path)}>
+                    فتح الميزة
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
 
         {/* تنبيهات فورية */}
         <Card className="border-blue-200 shadow-lg">

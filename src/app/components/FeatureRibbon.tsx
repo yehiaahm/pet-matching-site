@@ -8,10 +8,9 @@ import {
   MessageSquare,
   FileText,
   MapPin,
+  Bot,
+  Users,
   Stethoscope,
-  User,
-  Plus,
-  MessageCircle,
   Star,
   CreditCard,
   Hospital,
@@ -22,6 +21,8 @@ interface FeatureRibbonProps {
   onRequests: () => void;
   onHealth: () => void;
   onGpsMatching: () => void;
+  onAIMatching?: () => void;
+  onCommunitySupport?: () => void;
   onVets: () => void;
   onProfile: () => void;
   onAddPet: () => void;
@@ -37,6 +38,8 @@ export function FeatureRibbon({
   onRequests,
   onHealth,
   onGpsMatching,
+  onAIMatching = () => {},
+  onCommunitySupport,
   onVets,
   onProfile,
   onAddPet,
@@ -68,10 +71,9 @@ export function FeatureRibbon({
     { key: 'requests', label: 'طلبات التزاوج', icon: MessageSquare, action: onRequests, gradient: 'from-blue-500 to-cyan-500' },
     { key: 'health', label: 'السجل الصحي', icon: FileText, action: onHealth, gradient: 'from-green-500 to-emerald-500' },
     { key: 'gps', label: 'التطابق الجغرافي', icon: MapPin, action: onGpsMatching, gradient: 'from-purple-500 to-pink-500' },
+    { key: 'ai-matching', label: 'AI Matching', icon: Bot, action: onAIMatching, gradient: 'from-indigo-500 to-blue-600' },
+    { key: 'community-support', label: 'Community Support', icon: Users, action: onCommunitySupport ?? onMessages, gradient: 'from-teal-500 to-cyan-600' },
     { key: 'vets', label: 'العيادات البيطرية', icon: Stethoscope, action: onVets, gradient: 'from-orange-500 to-red-500' },
-    { key: 'profile', label: 'الملف الشخصي', icon: User, action: onProfile, gradient: 'from-indigo-500 to-purple-500' },
-    { key: 'add', label: 'إضافة حيوان', icon: Plus, action: onAddPet, gradient: 'from-teal-500 to-green-500' },
-    { key: 'messages', label: 'الرسائل', icon: MessageCircle, action: onMessages, gradient: 'from-pink-500 to-rose-500' },
   ];
 
   return (

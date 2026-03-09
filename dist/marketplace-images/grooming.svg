@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="900" viewBox="0 0 1200 900" fill="none">
+  <rect width="1200" height="900" fill="#F8FAFC"/>
+  <rect x="120" y="120" width="960" height="660" rx="40" fill="white"/>
+  <rect x="220" y="260" width="220" height="360" rx="24" fill="#F9A8D4"/>
+  <rect x="270" y="210" width="120" height="70" rx="20" fill="#EC4899"/>
+  <rect x="510" y="290" width="170" height="330" rx="18" fill="#C4B5FD"/>
+  <rect x="730" y="300" width="220" height="320" rx="22" fill="#67E8F9"/>
+  <rect x="780" y="260" width="120" height="50" rx="16" fill="#0891B2"/>
+  <circle cx="595" cy="450" r="36" fill="#7C3AED"/>
+  <text x="240" y="740" fill="#0F172A" font-family="Arial, sans-serif" font-size="52" font-weight="700">Pet Grooming</text>
+</svg>

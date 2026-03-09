@@ -90,10 +90,10 @@ export default function LoginPage() {
             </div>
           </div>
           <h2 className="text-4xl font-bold text-gray-900 mb-2">
-            تسجيل الدخول
+            Login
           </h2>
           <p className="text-lg text-gray-600">
-            مرحباً بك في منصة تزاوج الحيوانات الأليفة
+            Welcome to the pet breeding platform
           </p>
         </div>
 
@@ -207,12 +207,12 @@ export default function LoginPage() {
               {loading ? (
                 <>
                   <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                  <span>جاري تسجيل الدخول...</span>
+                  <span>Logging in...</span>
                 </>
               ) : (
                 <>
                   <LogIn className="w-5 h-5" />
-                  <span>تسجيل الدخول</span>
+                  <span>Login</span>
                 </>
               )}
             </button>

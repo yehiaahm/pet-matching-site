@@ -7,7 +7,6 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
-import { Input } from './ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Alert, AlertDescription } from './ui/alert';
 import { 
@@ -24,6 +23,7 @@ import {
 import { useGPSMatching } from '../hooks/useGPSMatching';
 import { useGeolocation } from '../hooks/useGeolocation';
 import { usePremiumFeature } from '../hooks/usePremiumFeature';
+import { safeGet } from '../utils/safeFetch';
 import { toast } from 'sonner';
 
 interface ComponentProps {
@@ -40,7 +40,10 @@ interface Pet {
 }
 
 export function GPSMatching({ onSubscriptionNeeded }: ComponentProps) {
+  const [userPets, setUserPets] = useState<Pet[]>([]);
   const [userPet, setUserPet] = useState<Pet | null>(null);
+  const [loadingUserPet, setLoadingUserPet] = useState(true);
+  const [selectionNote, setSelectionNote] = useState<string>('');
   const [maxDistance, setMaxDistance] = useState(25);
   const [showPrivacyNotice, setShowPrivacyNotice] = useState(true);
   
@@ -66,19 +69,97 @@ export function GPSMatching({ onSubscriptionNeeded }: ComponentProps) {
     onUpgradeNeeded: onSubscriptionNeeded || (() => {}),
   });
 
-  // Mock user pet for demo
-  const mockUserPet: Pet = {
-    id: 'user-pet-1',
-    name: 'Buddy',
-    type: 'dog',
-    breed: 'Golden Retriever',
-    age: 3,
-    gender: 'male'
+  const mapToPet = (rawPet: any): Pet => {
+    const normalizedType = String(rawPet?.type || 'dog').toLowerCase();
+    const normalizedGender = String(rawPet?.gender || 'male').toLowerCase();
+
+    return {
+      id: rawPet.id,
+      name: rawPet.name,
+      type: normalizedType === 'cat' || normalizedType === 'bird' ? normalizedType : 'dog',
+      breed: rawPet.breed,
+      age: Number(rawPet.age) || 1,
+      gender: normalizedGender === 'female' ? 'female' : 'male',
+    };
+  };
+
+  const scorePetProfile = (rawPet: any): number => {
+    let score = 0;
+
+    if (rawPet?.name) score += 5;
+    if (rawPet?.breed) score += 10;
+    if (rawPet?.age != null) score += 10;
+    if (rawPet?.gender) score += 10;
+    if (rawPet?.lat != null && rawPet?.lng != null) score += 20;
+    if (Array.isArray(rawPet?.images) && rawPet.images.length > 0) score += 10;
+    if (rawPet?.description) score += 5;
+    if (Array.isArray(rawPet?.healthRecords) && rawPet.healthRecords.length > 0) score += 20;
+
+    const updatedAt = new Date(rawPet?.updatedAt || rawPet?.createdAt || 0).getTime();
+    if (Number.isFinite(updatedAt) && updatedAt > 0) {
+      const daysOld = Math.max(0, (Date.now() - updatedAt) / (1000 * 60 * 60 * 24));
+      score += Math.max(0, 10 - Math.floor(daysOld / 30));
+    }
+
+    return score;
   };
 
   useEffect(() => {
-    // Set mock user pet for demo
-    setUserPet(mockUserPet);
+    const fetchMyPet = async () => {
+      try {
+        setLoadingUserPet(true);
+
+        const token = localStorage.getItem('accessToken') || localStorage.getItem('token') || localStorage.getItem('authToken');
+        const response = await safeGet('/api/v1/pets/my', {
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        });
+
+        if (!response.success) {
+          throw new Error(response.error || 'Failed to load your pets');
+        }
+
+        const payload = response.data as any;
+        const sourcePets = Array.isArray(payload)
+          ? payload
+          : Array.isArray(payload?.data)
+            ? payload.data
+            : Array.isArray(payload?.pets)
+              ? payload.pets
+              : [];
+
+        if (sourcePets.length === 0) {
+          setUserPets([]);
+          setUserPet(null);
+          setSelectionNote('');
+          return;
+        }
+
+        const mappedPets = sourcePets.map((rawPet: any) => mapToPet(rawPet));
+        setUserPets(mappedPets);
+
+        const rankedPets = sourcePets
+          .map((rawPet: any) => ({ rawPet, score: scorePetProfile(rawPet) }))
+          .sort((first: any, second: any) => second.score - first.score);
+
+        const selectedRawPet = rankedPets[0].rawPet;
+        setUserPet(mapToPet(selectedRawPet));
+
+        if (sourcePets.length > 1) {
+          setSelectionNote('Select one of your pets to start nearby matching.');
+        } else {
+          setSelectionNote('Using your registered pet profile for secure GPS matching.');
+        }
+      } catch (loadError) {
+        console.error('Failed to load user pet for GPS matching:', loadError);
+        setUserPets([]);
+        setUserPet(null);
+        setSelectionNote('');
+      } finally {
+        setLoadingUserPet(false);
+      }
+    };
+
+    fetchMyPet();
   }, []);
 
   const handleFindMatches = async () => {
@@ -88,7 +169,7 @@ export function GPSMatching({ onSubscriptionNeeded }: ComponentProps) {
     }
 
     if (!userPet) {
-      toast.error('Please select your pet first');
+      toast.error('No pet found in your account. Please add your pet first.');
       return;
     }
     
@@ -151,49 +232,67 @@ export function GPSMatching({ onSubscriptionNeeded }: ComponentProps) {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Heart className="w-5 h-5 text-red-500" />
-            Your Pet
+            Your Pet (Auto Selected)
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div>
-              <label className="text-sm font-medium text-gray-700">Pet Name</label>
-              <Input 
-                value={userPet?.name || ''} 
-                readOnly 
-                className="bg-gray-50"
-              />
+          {loadingUserPet && (
+            <div className="flex items-center gap-2 text-sm text-gray-600">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Loading your pet from your account...
             </div>
-            <div>
-              <label className="text-sm font-medium text-gray-700">Type</label>
-              <Select value={userPet?.type || ''} disabled>
-                <SelectTrigger className="bg-gray-50">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="dog">🐕 Dog</SelectItem>
-                  <SelectItem value="cat">🐈 Cat</SelectItem>
-                  <SelectItem value="bird">🦜 Bird</SelectItem>
-                </SelectContent>
-              </Select>
+          )}
+
+          {!loadingUserPet && !userPet && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                You don&apos;t have pets in your account yet. Add a pet first to start GPS matching.
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {!loadingUserPet && userPet && selectionNote && (
+            <Alert className="border-emerald-200 bg-emerald-50">
+              <CheckCircle className="h-4 w-4 text-emerald-600" />
+              <AlertDescription className="text-emerald-800">{selectionNote}</AlertDescription>
+            </Alert>
+          )}
+
+          {!loadingUserPet && userPets.length > 0 && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {userPets.map((petItem) => {
+                const isSelected = userPet?.id === petItem.id;
+                return (
+                  <button
+                    key={petItem.id}
+                    type="button"
+                    onClick={() => {
+                      setUserPet(petItem);
+                      clearMatches();
+                    }}
+                    className={`text-left p-4 rounded-lg border transition-all ${
+                      isSelected
+                        ? 'border-blue-500 bg-blue-50 shadow-sm'
+                        : 'border-gray-200 bg-white hover:border-blue-300'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <div>
+                        <p className="font-semibold text-gray-900">{petItem.name}</p>
+                        <p className="text-sm text-gray-600">{petItem.breed} • {petItem.age} years</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline">{petItem.type}</Badge>
+                        <Badge variant="outline">{petItem.gender}</Badge>
+                        {isSelected && <Badge>Selected</Badge>}
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
             </div>
-            <div>
-              <label className="text-sm font-medium text-gray-700">Breed</label>
-              <Input 
-                value={userPet?.breed || ''} 
-                readOnly 
-                className="bg-gray-50"
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium text-gray-700">Age</label>
-              <Input 
-                value={userPet?.age ? `${userPet.age} years` : ''} 
-                readOnly 
-                className="bg-gray-50"
-              />
-            </div>
-          </div>
+          )}
         </CardContent>
       </Card>
 
@@ -257,7 +356,7 @@ export function GPSMatching({ onSubscriptionNeeded }: ComponentProps) {
           
           <Button 
             onClick={handleFindMatches}
-            disabled={loading || !location || !userPet}
+            disabled={loading || loadingUserPet || !location || !userPet}
             className="w-full bg-gradient-to-r from-blue-500 to-green-500"
           >
             {loading ? (

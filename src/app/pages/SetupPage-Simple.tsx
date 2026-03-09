@@ -291,11 +291,11 @@ export default function SetupPageSimple() {
     className = '',
     ...props 
   }: any) => {
-    const baseClasses = 'px-4 py-2 rounded-lg font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2';
+    const baseClasses = 'px-4 py-2 rounded-lg font-medium transform-gpu transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:shadow-none';
     const variants = {
-      primary: 'bg-purple-600 text-white hover:bg-purple-700 focus:ring-purple-500',
-      outline: 'border border-gray-300 text-gray-700 hover:bg-gray-50 focus:ring-purple-500',
-      secondary: 'bg-gray-200 text-gray-800 hover:bg-gray-300 focus:ring-gray-500'
+      primary: 'border border-purple-500/40 bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md shadow-purple-500/20 hover:shadow-lg hover:shadow-purple-500/30 focus:ring-purple-500',
+      outline: 'border border-purple-300 bg-gradient-to-r from-white to-purple-50 text-gray-700 shadow-sm hover:shadow-md focus:ring-purple-500',
+      secondary: 'border border-gray-300 bg-gradient-to-r from-gray-200 to-gray-300 text-gray-800 shadow-md shadow-gray-300/30 hover:shadow-lg hover:shadow-gray-300/40 focus:ring-gray-500'
     };
 
     return (

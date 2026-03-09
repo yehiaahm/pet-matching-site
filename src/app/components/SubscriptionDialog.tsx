@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
@@ -41,6 +42,7 @@ interface SubscriptionDialogProps {
 }
 
 export function SubscriptionDialog({ open, onClose }: SubscriptionDialogProps) {
+  const navigate = useNavigate();
   const [subscriptionStatus, setSubscriptionStatus] = useState<SubscriptionStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [processingPayment, setProcessingPayment] = useState(false);
@@ -116,44 +118,16 @@ export function SubscriptionDialog({ open, onClose }: SubscriptionDialogProps) {
       };
       
       const selectedPlan = plans[tier];
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('accessToken') || localStorage.getItem('token') || localStorage.getItem('authToken');
       
       if (!token) {
         toast.error('❌ الرجاء تسجيل الدخول أولاً');
         return;
       }
       
-      toast.loading('⏳ جاري معالجة طلب الدفع...', { duration: 2000 });
-      
-      // Call backend to create Stripe checkout session
-      const response = await fetch('/api/v1/subscription/checkout', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({ 
-          priceId: selectedPlan.priceId,
-          tier: tier
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || 'Failed to create checkout session');
-      }
-
-      const data = await response.json();
-      
-      if (data.data?.url) {
-        // Redirect to Stripe Checkout
-        toast.success(`💳 جاري التحويل إلى صفحة الدفع لخطة ${selectedPlan.name}...`);
-        setTimeout(() => {
-          window.location.href = data.data.url;
-        }, 1000);
-      } else {
-        throw new Error('No checkout URL received from server');
-      }
+      onClose();
+      navigate(`/payment?plan=${tier}`);
+      toast.success(`💳 جاري التحويل إلى صفحة الدفع لخطة ${selectedPlan.name}`);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to process subscription';
       toast.error(`❌ ${message}`);
@@ -169,10 +143,12 @@ export function SubscriptionDialog({ open, onClose }: SubscriptionDialogProps) {
     }
 
     try {
+      const token = localStorage.getItem('accessToken') || localStorage.getItem('token') || localStorage.getItem('authToken');
+
       const response = await fetch('/api/v1/subscription/cancel', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Authorization': `Bearer ${token}`,
         },
       });
 
@@ -190,7 +166,7 @@ export function SubscriptionDialog({ open, onClose }: SubscriptionDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-6xl max-h-[95vh] overflow-y-auto p-8">
+      <DialogContent className="w-[95vw] !max-w-[95vw] max-h-[95vh] overflow-y-auto p-8">
         <DialogHeader className="mb-8">
           <DialogTitle className="text-4xl font-bold mb-3">Subscription & Pricing Plans</DialogTitle>
           <DialogDescription className="text-lg text-gray-600">

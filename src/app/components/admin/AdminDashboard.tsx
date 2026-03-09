@@ -14,6 +14,7 @@ import {
   MoreVertical,
   ShoppingCart,
   LogOut,
+  Headphones,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
@@ -23,6 +24,8 @@ import DashboardAnalytics from './DashboardAnalytics';
 import SystemSettings from './SystemSettings';
 import AdminManagement from './AdminManagement';
 import OrdersManagement from './OrdersManagement';
+import AdminNotifications from './AdminNotifications';
+import AdminVetBookings from './AdminVetBookings';
 
 export function AdminDashboard() {
   const [stats, setStats] = useState(null);
@@ -75,14 +78,24 @@ export function AdminDashboard() {
               إدارة المستخدمين والمحتوى والإعدادات
             </p>
           </div>
-          <Button
-            onClick={handleLogout}
-            variant="destructive"
-            className="flex items-center gap-2"
-          >
-            <LogOut className="w-4 h-4" />
-            تسجيل الخروج
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={() => navigate('/admin/support')}
+              variant="outline"
+              className="flex items-center gap-2"
+            >
+              <Headphones className="w-4 h-4" />
+              Support Inbox
+            </Button>
+            <Button
+              onClick={handleLogout}
+              variant="destructive"
+              className="flex items-center gap-2"
+            >
+              <LogOut className="w-4 h-4" />
+              تسجيل الخروج
+            </Button>
+          </div>
         </div>
 
         {/* Quick Stats */}
@@ -147,7 +160,7 @@ export function AdminDashboard() {
 
         {/* Main Tabs */}
         <Tabs defaultValue="analytics" className="w-full">
-          <TabsList className="grid w-full grid-cols-7 mb-8 bg-white border border-gray-200 p-1 rounded-lg">
+          <TabsList className="grid w-full grid-cols-9 mb-8 bg-white border border-gray-200 p-1 rounded-lg">
             <TabsTrigger value="analytics" className="flex items-center gap-2 text-xs md:text-sm">
               <BarChart3 className="w-4 h-4" />
               <span className="hidden sm:inline">التحليلات</span>
@@ -168,9 +181,17 @@ export function AdminDashboard() {
               <ShoppingCart className="w-4 h-4" />
               <span className="hidden sm:inline">الطلبات</span>
             </TabsTrigger>
+            <TabsTrigger value="vet-bookings" className="flex items-center gap-2 text-xs md:text-sm">
+              <ShoppingCart className="w-4 h-4" />
+              <span className="hidden sm:inline">حجوزات العيادات</span>
+            </TabsTrigger>
             <TabsTrigger value="reports" className="flex items-center gap-2 text-xs md:text-sm">
               <BarChart3 className="w-4 h-4" />
               <span className="hidden sm:inline">التقارير</span>
+            </TabsTrigger>
+            <TabsTrigger value="notifications" className="flex items-center gap-2 text-xs md:text-sm">
+              <AlertCircle className="w-4 h-4" />
+              <span className="hidden sm:inline">الإشعارات</span>
             </TabsTrigger>
             <TabsTrigger value="settings" className="flex items-center gap-2 text-xs md:text-sm">
               <Settings className="w-4 h-4" />
@@ -198,8 +219,16 @@ export function AdminDashboard() {
             <OrdersManagement />
           </TabsContent>
 
+          <TabsContent value="vet-bookings">
+            <AdminVetBookings />
+          </TabsContent>
+
           <TabsContent value="reports">
             <DashboardAnalytics />
+          </TabsContent>
+
+          <TabsContent value="notifications">
+            <AdminNotifications />
           </TabsContent>
 
           <TabsContent value="settings">

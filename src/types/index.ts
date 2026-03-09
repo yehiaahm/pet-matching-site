@@ -55,7 +55,7 @@ export interface User {
   updatedAt: string;
   lastLoginAt?: string;
   isActive: boolean;
-  role?: 'user' | 'admin' | 'moderator';
+  role?: 'user' | 'admin' | 'moderator' | 'super_admin';
 }
 
 /**

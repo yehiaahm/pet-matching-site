@@ -7,6 +7,7 @@ interface ProtectedRouteProps {
   children: ReactNode;
   requireAuth?: boolean;
   redirectTo?: string;
+  allowedRoles?: string[];
 }
 
 /**
@@ -21,8 +22,9 @@ export default function ProtectedRoute({
   children,
   requireAuth = true,
   redirectTo = '/login',
+  allowedRoles,
 }: ProtectedRouteProps) {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
   const location = useLocation();
 
   // عرض شاشة التحميل أثناء التحقق من المصادقة
@@ -48,6 +50,20 @@ export default function ProtectedRoute({
     // التوجيه إلى لوحة التحكم إذا كان المستخدم مسجل بالفعل
     const from = (location.state as any)?.from?.pathname || '/dashboard';
     return <Navigate to={from} replace />;
+  }
+
+  if (requireAuth && isAuthenticated && allowedRoles && allowedRoles.length > 0) {
+    const normalizeRole = (role: string) =>
+      String(role || '')
+        .toLowerCase()
+        .replace(/[\s-]+/g, '_');
+
+    const normalizedUserRole = normalizeRole(String(user?.role || ''));
+    const normalizedAllowedRoles = allowedRoles.map((role) => normalizeRole(String(role)));
+
+    if (!normalizedAllowedRoles.includes(normalizedUserRole)) {
+      return <Navigate to="/dashboard" replace />;
+    }
   }
 
   // عرض المحتوى المحمي

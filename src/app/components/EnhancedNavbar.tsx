@@ -1,8 +1,9 @@
 import { motion } from 'framer-motion';
-import { Menu, X, Sparkles, Home, MessageSquare, FileText, User, Plus, LogOut, Headphones, Shield } from 'lucide-react';
-import { useState } from 'react';
+import { X, Menu, Sparkles, Home, User, Plus, LogOut, Headphones, Shield, Crown, Wallet, ShoppingBag } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { Button } from './ui/button';
 import { useLanguage } from '../context/LanguageContext';
+import { NotificationBell } from './NotificationBell';
 
 interface EnhancedNavbarProps {
   showMobileMenu?: boolean;
@@ -13,12 +14,15 @@ interface EnhancedNavbarProps {
   onProfile?: () => void;
   onLogout?: () => void;
   onHome?: () => void;
-  onShowFeatures?: () => void;
+  onMarketplace?: () => void;
   onSubscription?: () => void;
   onAdminSupport?: () => void;
   onAdminDashboard?: () => void;
   onAIDashboard?: () => void;
+  onSuperAdminPanel?: () => void;
+  onAdminPayments?: () => void;
   userRole?: string;
+  userId?: string;
   onShowTerms?: () => void;
   onShowAbout?: () => void;
   userName?: string;
@@ -35,16 +39,34 @@ export function EnhancedNavbar(props: EnhancedNavbarProps) {
   const onProfile = props.onProfile ?? (() => {});
   const onLogout = props.onLogout ?? (() => {});
   const onHome = props.onHome ?? (() => {});
-  const onShowFeatures = props.onShowFeatures ?? (() => {});
+  const onMarketplace = props.onMarketplace ?? (() => {});
+  const onSubscription = props.onSubscription ?? (() => {});
   const onAdminSupport = props.onAdminSupport ?? (() => {});
   const onAdminDashboard = props.onAdminDashboard ?? (() => {});
+  const onAIDashboard = props.onAIDashboard ?? (() => {});
+  const onSuperAdminPanel = props.onSuperAdminPanel ?? (() => {});
+  const onAdminPayments = props.onAdminPayments ?? (() => {});
   const userRole = props.userRole ?? 'USER';
+  const userId = props.userId ?? 'guest';
+  const normalizedRole = String(userRole).trim().toUpperCase().replace(/[\s-]+/g, '_');
+  const isSuperAdmin = normalizedRole === 'SUPER_ADMIN' || normalizedRole === 'SUPERADMIN';
 
   const [isOpen, setIsOpen] = useState(showMobileMenu);
+
+  useEffect(() => {
+    setIsOpen(showMobileMenu);
+  }, [showMobileMenu]);
 
   const toggleMenu = () => {
     setIsOpen((prev) => !prev);
     onToggleMobileMenu?.();
+  };
+
+  const closeMenu = () => {
+    setIsOpen(false);
+    if (showMobileMenu) {
+      onToggleMobileMenu?.();
+    }
   };
 
   return (
@@ -54,9 +76,26 @@ export function EnhancedNavbar(props: EnhancedNavbarProps) {
       animate={{ y: 0, opacity: 1 }}
     >
       <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-end gap-2">
-        <Button variant="outline" size="sm" onClick={onShowFeatures} className="gap-2">
+        <NotificationBell apiBase="/api/v1" userId={userId} />
+
+        <Button variant="default" size="sm" onClick={onAddPet} className="gap-2">
+          <Plus className="w-4 h-4" />
+          {language === 'ar' ? 'إضافة حيوان' : 'Add Pet'}
+        </Button>
+
+        <Button
+          variant={currentView === 'features' ? 'default' : 'outline'}
+          size="sm"
+          onClick={() => onViewChange('features')}
+          className="gap-2"
+        >
           <Sparkles className="w-4 h-4" />
-          {language === 'ar' ? 'المميزات' : 'Features'}
+          {language === 'ar' ? 'المزايا' : 'Features'}
+        </Button>
+
+        <Button variant="outline" size="sm" onClick={onMarketplace} className="gap-2">
+          <ShoppingBag className="w-4 h-4" />
+          {language === 'ar' ? 'المتجر' : 'Marketplace'}
         </Button>
 
         <Button variant="ghost" size="icon" onClick={toggleMenu} aria-label="menu">
@@ -66,13 +105,14 @@ export function EnhancedNavbar(props: EnhancedNavbarProps) {
 
       {isOpen && (
         <div className="border-t border-gray-200 bg-white">
-          <div className="max-w-7xl mx-auto px-4 py-3 space-y-2">
+          <div className="max-w-7xl mx-auto px-4 py-3 space-y-3">
             <Button
               variant={currentView === 'browse' ? 'default' : 'ghost'}
               className="w-full justify-start"
               onClick={() => {
+                onViewChange('browse');
                 onHome();
-                setIsOpen(false);
+                closeMenu();
               }}
             >
               <Home className="w-4 h-4 mr-2" />
@@ -80,35 +120,11 @@ export function EnhancedNavbar(props: EnhancedNavbarProps) {
             </Button>
 
             <Button
-              variant={currentView === 'requests' ? 'default' : 'ghost'}
-              className="w-full justify-start"
-              onClick={() => {
-                onViewChange('requests');
-                setIsOpen(false);
-              }}
-            >
-              <MessageSquare className="w-4 h-4 mr-2" />
-              {language === 'ar' ? 'الطلبات' : 'Requests'}
-            </Button>
-
-            <Button
-              variant={currentView === 'health' ? 'default' : 'ghost'}
-              className="w-full justify-start"
-              onClick={() => {
-                onViewChange('health');
-                setIsOpen(false);
-              }}
-            >
-              <FileText className="w-4 h-4 mr-2" />
-              {language === 'ar' ? 'السجلات الصحية' : 'Health'}
-            </Button>
-
-            <Button
               variant="ghost"
               className="w-full justify-start"
               onClick={() => {
                 onAddPet();
-                setIsOpen(false);
+                closeMenu();
               }}
             >
               <Plus className="w-4 h-4 mr-2" />
@@ -120,38 +136,90 @@ export function EnhancedNavbar(props: EnhancedNavbarProps) {
               className="w-full justify-start"
               onClick={() => {
                 onProfile();
-                setIsOpen(false);
+                closeMenu();
               }}
             >
               <User className="w-4 h-4 mr-2" />
               {language === 'ar' ? 'الملف الشخصي' : 'Profile'}
             </Button>
 
-            {(userRole === 'ADMIN' || userRole === 'SUPER_ADMIN') && (
+            <Button
+              variant="ghost"
+              className="w-full justify-start"
+              onClick={() => {
+                onSubscription();
+                closeMenu();
+              }}
+            >
+              <Crown className="w-4 h-4 mr-2" />
+              {language === 'ar' ? 'الترقية' : 'Upgrade'}
+            </Button>
+
+            {isSuperAdmin && (
               <Button
                 variant="ghost"
                 className="w-full justify-start"
                 onClick={() => {
-                  onAdminSupport();
-                  setIsOpen(false);
+                  onAIDashboard();
+                  closeMenu();
                 }}
               >
-                <Headphones className="w-4 h-4 mr-2" />
-                {language === 'ar' ? 'الدعم' : 'Support'}
+                <Sparkles className="w-4 h-4 mr-2" />
+                {language === 'ar' ? 'لوحة الذكاء الاصطناعي' : 'AI Dashboard'}
               </Button>
             )}
 
-            {(userRole === 'ADMIN' || userRole === 'SUPER_ADMIN') && (
+            <Button
+              variant="ghost"
+              className="w-full justify-start"
+              onClick={() => {
+                onAdminSupport();
+                closeMenu();
+              }}
+            >
+              <Headphones className="w-4 h-4 mr-2" />
+              {language === 'ar' ? 'دعم العملاء' : 'Customer Support'}
+            </Button>
+
+            {isSuperAdmin && (
               <Button
                 variant="ghost"
                 className="w-full justify-start"
                 onClick={() => {
                   onAdminDashboard();
-                  setIsOpen(false);
+                  closeMenu();
                 }}
               >
                 <Shield className="w-4 h-4 mr-2" />
                 {language === 'ar' ? 'لوحة المشرف' : 'Admin Panel'}
+              </Button>
+            )}
+
+            {isSuperAdmin && (
+              <Button
+                variant="ghost"
+                className="w-full justify-start text-indigo-600 hover:text-indigo-700"
+                onClick={() => {
+                  onSuperAdminPanel();
+                  closeMenu();
+                }}
+              >
+                <Shield className="w-4 h-4 mr-2" />
+                {language === 'ar' ? 'لوحة السوبر أدمن' : 'Super Admin Panel'}
+              </Button>
+            )}
+
+            {isSuperAdmin && (
+              <Button
+                variant="ghost"
+                className="w-full justify-start text-purple-600 hover:text-purple-700"
+                onClick={() => {
+                  onAdminPayments();
+                  closeMenu();
+                }}
+              >
+                <Wallet className="w-4 h-4 mr-2" />
+                {language === 'ar' ? 'مراجعة الدفع' : 'Payment Review'}
               </Button>
             )}
 
@@ -160,7 +228,7 @@ export function EnhancedNavbar(props: EnhancedNavbarProps) {
               className="w-full justify-start text-red-600 hover:text-red-700"
               onClick={() => {
                 onLogout();
-                setIsOpen(false);
+                closeMenu();
               }}
             >
               <LogOut className="w-4 h-4 mr-2" />

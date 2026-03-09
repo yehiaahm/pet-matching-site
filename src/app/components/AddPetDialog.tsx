@@ -35,12 +35,12 @@ export function AddPetDialog({ open, onClose, onAdd }: AddPetDialogProps) {
   const [veterinarian, setVeterinarian] = useState('');
   const [certificate, setCertificate] = useState('');
   const [loading, setLoading] = useState(false);
-  
+
   // Image upload states
   const [petImages, setPetImages] = useState<File[]>([]);
   const [petImagePreviews, setPetImagePreviews] = useState<string[]>([]);
   const [vaccinationFiles, setVaccinationFiles] = useState<File[]>([]);
-  
+
   // Refs for file inputs
   const petImageInputRef = useRef<HTMLInputElement>(null);
   const vaccinationInputRef = useRef<HTMLInputElement>(null);
@@ -65,7 +65,7 @@ export function AddPetDialog({ open, onClose, onAdd }: AddPetDialogProps) {
     if (!files) return;
 
     const fileArray = Array.from(files);
-    
+
     // Validate file sizes (max 5MB per file)
     const validFiles = fileArray.filter(file => {
       if (file.size > 5 * 1024 * 1024) {
@@ -79,10 +79,10 @@ export function AddPetDialog({ open, onClose, onAdd }: AddPetDialogProps) {
 
     // Create preview URLs
     const previews = validFiles.map(file => URL.createObjectURL(file));
-    
+
     setPetImages(prev => [...prev, ...validFiles]);
     setPetImagePreviews(prev => [...prev, ...previews]);
-    
+
     toast.success(`${validFiles.length} image(s) added`);
   };
 
@@ -102,7 +102,7 @@ export function AddPetDialog({ open, onClose, onAdd }: AddPetDialogProps) {
     if (!files) return;
 
     const fileArray = Array.from(files);
-    
+
     // Validate file sizes (max 10MB per file)
     const validFiles = fileArray.filter(file => {
       if (file.size > 10 * 1024 * 1024) {
@@ -136,6 +136,14 @@ export function AddPetDialog({ open, onClose, onAdd }: AddPetDialogProps) {
     }
   };
 
+  const fileToDataUrl = (file: File): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || ''));
+      reader.onerror = () => reject(new Error(`Failed to read file: ${file.name}`));
+      reader.readAsDataURL(file);
+    });
+
   const resetForm = () => {
     setName('');
     setBreed('');
@@ -147,7 +155,7 @@ export function AddPetDialog({ open, onClose, onAdd }: AddPetDialogProps) {
     setVeterinarian('');
     setCertificate('');
     setVaccinations([{ name: '', date: '', nextDue: '' }]);
-    
+
     // Clean up image previews
     petImagePreviews.forEach(url => URL.revokeObjectURL(url));
     setPetImages([]);
@@ -161,89 +169,83 @@ export function AddPetDialog({ open, onClose, onAdd }: AddPetDialogProps) {
   };
 
   const handleSubmit = async () => {
-    // Validation
-    if (!name || !breed || !age) {
-      toast.error('يرجى ملء جميع الحقول المطلوبة');
+    // 7. Add frontend validation
+    if (!name?.trim()) {
+      toast.error('Pet name is required');
+      return;
+    }
+    if (!breed?.trim()) {
+      toast.error('Breed is required');
+      return;
+    }
+    if (!type) {
+      toast.error('Type is required');
       return;
     }
 
-    const ageInYears = parseInt(age);
-    if (isNaN(ageInYears) || ageInYears <= 0) {
-      toast.error('يرجى إدخال عمر صحيح (أكبر من 0)');
+    // Age validation (Age must be positive number)
+    const ageValue = Number(age);
+    if (isNaN(ageValue) || ageValue <= 0) {
+      toast.error('Age must be a positive number');
       return;
     }
 
     setLoading(true);
 
     try {
-      // Use uploaded images or fallback to default
-      const imageUrls = petImagePreviews.length > 0 ? petImagePreviews : [getPetImage()];
-      
-      // Map frontend data to API format
-      const petData = {
-        name,
-        species: type.toUpperCase(), // dog -> DOG
-        breed,
-        gender: gender.toUpperCase(), // male -> MALE
-        age: ageInYears * 12, // convert years to months for API
-        description,
-        images: imageUrls,
-        isVaccinated: vaccinationMethod === 'manual' 
-          ? vaccinations.some(v => v.name && v.date)
-          : vaccinationFiles.length > 0,
-        isAvailableForBreeding: true,
-        healthConditions: `Health Check: ${healthCheckDate} by ${veterinarian}`,
+      const uploadedImageUrls = petImages.length > 0
+        ? await Promise.all(petImages.map((file) => fileToDataUrl(file)))
+        : [];
+
+      // 4. Build correct flat payload
+      const payload = {
+        name: name.trim(),
+        type: type,
+        breed: breed.trim(),
+        gender: gender,
+        age: ageValue,
+        description: description?.trim() || undefined,
+        imageUrls: uploadedImageUrls,
       };
 
-      console.log('🐶 Sending pet data to API:', petData);
+      console.log("FINAL PET PAYLOAD:", payload);
 
-      const token = localStorage.getItem('accessToken');
-      if (!token) {
-        toast.error('يرجى تسجيل الدخول أولاً لإضافة حيوان');
-        setLoading(false);
-        return;
-      }
+      const token = localStorage.getItem('accessToken') || localStorage.getItem('token') || localStorage.getItem('authToken');
 
-      const response = await safePost('/api/v1/pets', petData, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+      // 5. Send ONLY this
+      // 6. DELETE fallback call to /api/pets
+      const response = await safePost("/api/v1/pets", payload, {
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
       });
 
-      console.log('📥 Response from API:', response);
+      console.log("📥 Response from API:", response);
 
       if (response.success) {
-        toast.success('✅ تم إضافة الحيوان بنجاح!');
-        
-        // Create a local Pet object for immediate UI update
+        // 8. After success:
+        toast.success('✅ Pet added successfully!');
+
+        // Construct the pet object for the UI update
+        const createdPet = (response.data as any)?.data?.pet || (response.data as any)?.pet || (response.data as any)?.data || response.data;
+
         const newPet: Pet = {
-          id: response.data?.id || Date.now().toString(),
-          name,
-          type,
-          breed,
-          age: parseInt(age),
-          gender,
-          image: getPetImage(),
+          id: createdPet?.id || Date.now().toString(),
+          name: payload.name,
+          type: type,
+          breed: payload.breed,
+          age: ageValue,
+          gender: gender,
+          image: uploadedImageUrls[0] || getPetImage(),
           owner: {
             name: 'Guest User',
-            nationalId: '29101******01',
             phone: '0100*******',
             address: 'Cairo',
             rating: 5.0,
-            totalMatches: 0,
             verified: false
           },
-          vaccinations: vaccinationMethod === 'manual' 
-            ? vaccinations.filter(v => v.name && v.date)
-            : [],
+          vaccinations: [],
           healthCheck: {
-            date: healthCheckDate,
-            veterinarian,
-            certificate
-          },
-          availability: {
-            from: availableFrom,
-            to: availableTo
+            date: '',
+            veterinarian: '',
           },
           description,
           verified: false
@@ -253,17 +255,19 @@ export function AddPetDialog({ open, onClose, onAdd }: AddPetDialogProps) {
         resetForm();
         onClose();
       } else {
-        console.error('❌ API Error Response:', {
-          error: response.error,
-          errorData: response.errorData,
-          status: response.status,
-          rawText: response.rawText
-        });
-        throw new Error(response.error || 'Failed to add pet');
+        // Handle validation errors from backend
+        const validationMsg = Array.isArray(response.errorData?.errors)
+          ? response.errorData.errors
+            .map((e: any) => e?.msg || e?.message || e?.path)
+            .filter(Boolean)
+            .join(' - ')
+          : '';
+
+        toast.error(validationMsg || response.error || 'Failed to add pet');
       }
     } catch (error: any) {
       console.error('❌ Error adding pet:', error);
-      toast.error('حدث خطأ أثناء إضافة الحيوان: ' + (error.message || 'يرجى المحاولة مرة أخرى'));
+      toast.error('Error adding pet: ' + (error.message || 'Please try again'));
     } finally {
       setLoading(false);
     }
@@ -362,7 +366,7 @@ export function AddPetDialog({ open, onClose, onAdd }: AddPetDialogProps) {
                     className="hidden"
                     onChange={handlePetImageUpload}
                   />
-                  <div 
+                  <div
                     className="border-2 border-dashed rounded-lg p-8 text-center cursor-pointer hover:border-blue-400 transition-colors"
                     onClick={() => petImageInputRef.current?.click()}
                   >
@@ -370,14 +374,18 @@ export function AddPetDialog({ open, onClose, onAdd }: AddPetDialogProps) {
                     <p className="text-sm text-gray-600">Click to upload or drag and drop</p>
                     <p className="text-xs text-gray-500 mt-1">JPG, PNG or GIF (Max size: 5MB)</p>
                   </div>
-                  
+
+                  {petImages.length > 0 && (
+                    <p className="text-xs text-gray-600 mt-2">Selected images: {petImages.length}</p>
+                  )}
+
                   {/* Image Previews */}
                   {petImagePreviews.length > 0 && (
                     <div className="grid grid-cols-3 gap-3 mt-3">
                       {petImagePreviews.map((preview, index) => (
                         <div key={index} className="relative group">
-                          <img 
-                            src={preview} 
+                          <img
+                            src={preview}
                             alt={`Preview ${index + 1}`}
                             className="w-full h-24 object-cover rounded-lg"
                           />
@@ -417,7 +425,7 @@ export function AddPetDialog({ open, onClose, onAdd }: AddPetDialogProps) {
                     className="hidden"
                     onChange={handleVaccinationFileUpload}
                   />
-                  <div 
+                  <div
                     className="border-2 border-dashed rounded-lg p-8 text-center cursor-pointer hover:border-blue-400 transition-colors"
                     onClick={() => vaccinationInputRef.current?.click()}
                   >
@@ -430,7 +438,7 @@ export function AddPetDialog({ open, onClose, onAdd }: AddPetDialogProps) {
                     </Button>
                     <p className="text-xs text-gray-500 mt-3">You can upload multiple files (Max 10MB each)</p>
                   </div>
-                  
+
                   {/* Uploaded Files List */}
                   {vaccinationFiles.length > 0 && (
                     <div className="space-y-2">
@@ -453,7 +461,7 @@ export function AddPetDialog({ open, onClose, onAdd }: AddPetDialogProps) {
                       ))}
                     </div>
                   )}
-                  
+
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                     <p className="text-sm text-blue-900">
                       💡 <span className="font-medium">Tip:</span> Uploading certificates is faster and our team will extract the information automatically!
@@ -569,7 +577,7 @@ export function AddPetDialog({ open, onClose, onAdd }: AddPetDialogProps) {
             {/* Notice */}
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <p className="text-sm text-blue-900">
-                ⚠️ <span className="font-medium">Important Notice:</span> All information will be reviewed and verified 
+                ⚠️ <span className="font-medium">Important Notice:</span> All information will be reviewed and verified
                 before your pet listing is published. This typically takes less than 24 hours.
               </p>
             </div>

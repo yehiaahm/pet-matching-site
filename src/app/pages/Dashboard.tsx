@@ -8,9 +8,10 @@ import { PetCard } from '../components/PetCard';
 import { PetDetailsDialog } from '../components/PetDetailsDialog';
 import { MatchRequestDialog } from '../components/MatchRequestDialog';
 import { AddPetDialog } from '../components/AddPetDialog';
+import { EditPetDialog } from '../components/EditPetDialog';
 import { UserProfileDialog } from '../components/UserProfileDialog';
 import { SubscriptionDialog } from '../components/SubscriptionDialog';
-import FeatureRibbon from '../components/FeatureRibbon';
+import { CustomerSupportPage } from '../components/CustomerSupportPage';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
@@ -19,10 +20,11 @@ import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { EmptySearch } from '../components/ui/EmptyState';
 import { Pet } from '../App';
 import { toast } from 'sonner';
+import { safeDelete } from '../utils/safeFetch';
 
 export default function Dashboard() {
   const { user, logout } = useAuth();
-  const { pets, loading, error } = usePets();
+  const { pets, loading, error, refetch } = usePets();
   const navigate = useNavigate();
   
   const [searchQuery, setSearchQuery] = useState('');
@@ -32,11 +34,12 @@ export default function Dashboard() {
   const [showPetDetails, setShowPetDetails] = useState(false);
   const [showMatchRequest, setShowMatchRequest] = useState(false);
   const [showAddPet, setShowAddPet] = useState(false);
+  const [showEditPet, setShowEditPet] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [showSubscription, setShowSubscription] = useState(false);
+  const [showCustomerSupport, setShowCustomerSupport] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [currentView, setCurrentView] = useState('browse');
-  const [showFeatures, setShowFeatures] = useState(false);
 
   const filteredPets = pets.filter(pet => {
     const matchesSearch = pet.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -54,6 +57,29 @@ export default function Dashboard() {
   const handleRequestMatch = (pet: Pet) => {
     setSelectedPet(pet);
     setShowMatchRequest(true);
+  };
+
+  const handleEditPet = (pet: Pet) => {
+    setSelectedPet(pet);
+    setShowEditPet(true);
+  };
+
+  const handleDeletePet = async (pet: Pet) => {
+    const shouldDelete = window.confirm(`هل أنت متأكد من حذف ${pet.name}؟`);
+    if (!shouldDelete) return;
+
+    const token = localStorage.getItem('accessToken') || localStorage.getItem('token') || localStorage.getItem('authToken');
+    const response = await safeDelete(`/api/v1/pets/${pet.id}`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    });
+
+    if (!response.success) {
+      toast.error(response.error || 'فشل حذف الحيوان');
+      return;
+    }
+
+    toast.success('تم حذف الحيوان بنجاح');
+    await refetch();
   };
 
   const handleSubmitMatchRequest = () => {
@@ -74,11 +100,60 @@ export default function Dashboard() {
   };
 
   const handleViewChange = (view: string) => {
+    if (view === 'features') {
+      setCurrentView((prev) => (prev === 'features' ? 'browse' : 'features'));
+      return;
+    }
     setCurrentView(view);
   };
 
+  const featureCards = [
+    {
+      key: 'ai',
+      title: 'AI Matching',
+      description: 'مطابقة ذكية للحيوانات باستخدام الذكاء الاصطناعي.',
+      action: () => navigate('/ai'),
+    },
+    {
+      key: 'gps',
+      title: 'GPS Proximity',
+      description: 'العثور على الحيوانات القريبة حسب الموقع.',
+      action: () => navigate('/gps-proximity'),
+    },
+    {
+      key: 'community',
+      title: 'Community Support',
+      description: 'التواصل والدعم المجتمعي بين المستخدمين.',
+      action: () => navigate('/community-support'),
+    },
+    {
+      key: 'clinics',
+      title: 'Vet Clinics Booking',
+      description: 'حجز العيادات البيطرية ومتابعة الزيارات.',
+      action: () => navigate('/vet-clinics'),
+    },
+    {
+      key: 'health',
+      title: 'Health Records',
+      description: 'إدارة السجل الصحي والتطعيمات.',
+      action: () => navigate('/health-records'),
+    },
+    {
+      key: 'chat',
+      title: 'Community Chat',
+      description: 'الدخول إلى شات دعم المجتمع مباشرة.',
+      action: () => navigate('/community-support/chat'),
+    },
+    {
+      key: 'ai-shopping',
+      title: 'AI Shopping Recommendation',
+      description: 'اقتراحات ذكية للمنتجات المناسبة لحيوانك (أكل، ألعاب، عناية، وصحة).',
+      action: () => navigate('/ai-shopping-recommendations'),
+    },
+  ];
+
   const handleAdminSupport = () => {
-    toast.info('فتح لوحة الدعم...');
+    setShowCustomerSupport(true);
   };
 
   const handleAdminDashboard = () => {
@@ -87,6 +162,18 @@ export default function Dashboard() {
 
   const handleAIDashboard = () => {
     navigate('/ai-dashboard');
+  };
+
+  const handleMarketplace = () => {
+    navigate('/marketplace');
+  };
+
+  const handleSuperAdminPanel = () => {
+    navigate('/super-admin');
+  };
+
+  const handleAdminPayments = () => {
+    navigate('/admin/payments');
   };
 
   const handleShowTerms = () => {
@@ -128,37 +215,21 @@ export default function Dashboard() {
         onProfile={() => setShowProfile(true)}
         onLogout={handleLogout}
         onHome={handleHome}
-        onShowFeatures={() => setShowFeatures((prev) => !prev)}
+        onMarketplace={handleMarketplace}
         onSubscription={() => setShowSubscription(true)}
         onAdminSupport={handleAdminSupport}
         onAdminDashboard={handleAdminDashboard}
+        onSuperAdminPanel={handleSuperAdminPanel}
+        onAdminPayments={handleAdminPayments}
         onAIDashboard={handleAIDashboard}
         userRole={user?.role || 'USER'}
+        userId={user?.id || 'guest'}
         onShowTerms={handleShowTerms}
         onShowAbout={handleShowAbout}
         userName={user?.email || 'User'}
       />
 
       <div className="container mx-auto px-4 py-8">
-        {showFeatures && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mb-8"
-          >
-            <FeatureRibbon
-              onRequests={() => setCurrentView('requests')}
-              onHealth={() => setCurrentView('health')}
-              onGpsMatching={handleAIDashboard}
-              onVets={() => toast.info('الميزة قريبًا')}
-              onProfile={() => setShowProfile(true)}
-              onAddPet={() => setShowAddPet(true)}
-              onSubscription={() => setShowSubscription(true)}
-              onMessages={() => toast.info('الرسائل قريبًا')}
-            />
-          </motion.div>
-        )}
-
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
@@ -172,6 +243,28 @@ export default function Dashboard() {
             ابحث عن الشريك المثالي لحيوانك الأليف
           </p>
         </motion.div>
+
+        {currentView === 'features' && (
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-white rounded-lg shadow-md p-6 mb-8"
+          >
+            <h2 className="text-xl font-bold text-gray-900 mb-2">المميزات المتاحة</h2>
+            <p className="text-sm text-gray-600 mb-5">اضغط على أي ميزة لفتحها. اضغط زر المميزات مرة أخرى لإخفاء هذه القائمة.</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+              {featureCards.map((feature) => (
+                <div key={feature.key} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                  <h3 className="font-semibold text-gray-900 mb-1">{feature.title}</h3>
+                  <p className="text-sm text-gray-600 mb-3">{feature.description}</p>
+                  <Button size="sm" className="w-full" onClick={feature.action}>
+                    فتح
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        )}
 
         {/* Filters */}
         <motion.div
@@ -241,6 +334,9 @@ export default function Dashboard() {
                   pet={pet} 
                   onViewDetails={handleViewDetails}
                   onRequestMatch={handleRequestMatch}
+                  canManage={pet.ownerId === user?.id}
+                  onEdit={handleEditPet}
+                  onDelete={handleDeletePet}
                 />
               </motion.div>
             ))}
@@ -309,12 +405,25 @@ export default function Dashboard() {
         <AddPetDialog
           open={showAddPet}
           onClose={() => setShowAddPet(false)}
-          onAdd={() => {
+          onAdd={async (_pet) => {
             toast.success('تم إضافة الحيوان بنجاح!');
+            await refetch();
             setShowAddPet(false);
           }}
         />
       )}
+
+      <EditPetDialog
+        open={showEditPet}
+        onClose={() => {
+          setShowEditPet(false);
+          setSelectedPet(null);
+        }}
+        pet={selectedPet}
+        onUpdated={async () => {
+          await refetch();
+        }}
+      />
 
       {showProfile && (
         <UserProfileDialog
@@ -328,6 +437,10 @@ export default function Dashboard() {
           open={showSubscription}
           onClose={() => setShowSubscription(false)}
         />
+      )}
+
+      {showCustomerSupport && (
+        <CustomerSupportPage onClose={() => setShowCustomerSupport(false)} />
       )}
     </div>
   );

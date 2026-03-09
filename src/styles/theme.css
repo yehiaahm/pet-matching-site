@@ -177,6 +177,29 @@
     line-height: 1.5;
   }
 
+  button:not([data-slot="button"]) {
+    border-radius: 0.5rem;
+    transition: transform 200ms ease, box-shadow 200ms ease, filter 200ms ease;
+    background-image: linear-gradient(to right, hsl(var(--primary)), hsl(var(--secondary)));
+    color: hsl(var(--primary-foreground));
+    box-shadow: 0 6px 14px -6px color-mix(in srgb, hsl(var(--primary)) 35%, transparent);
+  }
+
+  button:not([data-slot="button"]):hover:not(:disabled) {
+    transform: translateY(-2px);
+    filter: saturate(1.08);
+    box-shadow: 0 10px 20px -8px color-mix(in srgb, hsl(var(--primary)) 45%, transparent);
+  }
+
+  button:not([data-slot="button"]):active:not(:disabled) {
+    transform: translateY(1px);
+  }
+
+  button:not([data-slot="button"]):disabled {
+    opacity: 0.6;
+    box-shadow: none;
+  }
+
   input {
     font-size: var(--text-base);
     font-weight: var(--font-weight-normal);

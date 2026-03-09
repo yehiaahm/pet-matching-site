@@ -5,7 +5,7 @@ import { Button } from './ui/button';
 import { ModernButton, GradientButton } from './ui/ModernButton';
 import { Card, CardContent, CardFooter } from './ui/card';
 import { Badge } from './ui/badge';
-import { MapPin, Calendar, Shield, Heart, Info, Star, Sparkles } from 'lucide-react';
+import { MapPin, Calendar, Shield, Heart, Info, Star, Pencil, Trash2 } from 'lucide-react';
 import { cn } from '../utils/cn';
 import { cardVariants } from '../../lib/animations';
 import { usePremiumFeature } from '../hooks/usePremiumFeature';
@@ -15,6 +15,9 @@ interface PetCardProps {
   onViewDetails: (pet: Pet) => void;
   onRequestMatch: (pet: Pet) => void;
   onSubscriptionNeeded?: () => void;
+  canManage?: boolean;
+  onEdit?: (pet: Pet) => void;
+  onDelete?: (pet: Pet) => void;
 }
 
 const getPetTypeEmoji = (type: string) => {
@@ -35,9 +38,34 @@ const getPetTypeLabel = (type: string) => {
   }
 };
 
-export function PetCard({ pet, onViewDetails, onRequestMatch, onSubscriptionNeeded }: PetCardProps) {
+export function PetCard({
+  pet,
+  onViewDetails,
+  onRequestMatch,
+  onSubscriptionNeeded,
+  canManage = false,
+  onEdit,
+  onDelete,
+}: PetCardProps) {
   const [imageLoading, setImageLoading] = React.useState(true);
   const [imageError, setImageError] = React.useState(false);
+
+  const availabilityFrom = (pet as any).availability?.from;
+  const hasValidAvailabilityDate = !!availabilityFrom && !Number.isNaN(new Date(availabilityFrom).getTime());
+  const availabilityLabel = hasValidAvailabilityDate
+    ? `متاح من ${new Date(availabilityFrom).toLocaleDateString('ar-EG', { month: 'short', day: 'numeric' })}`
+    : 'موعد التوفر غير محدد';
+  const ownerAddress = pet.owner?.address || 'العنوان غير متوفر';
+  const ownerRating = pet.owner?.rating ?? 0;
+  const ownerTotalMatches = (pet as any).owner?.totalMatches ?? 0;
+  const vaccinationCount = pet.vaccinations?.length ?? 0;
+  const healthAlert = pet.aiHealthRecommendation;
+  const hasHealthAlert = Boolean(
+    canManage &&
+    healthAlert &&
+      (healthAlert.urgency === 'HIGH' || healthAlert.urgency === 'MEDIUM') &&
+      (healthAlert.needsVaccination || healthAlert.needsVetVisit)
+  );
 
   const { tryUseFeature } = usePremiumFeature({
     featureName: 'petMatching',
@@ -134,13 +162,23 @@ export function PetCard({ pet, onViewDetails, onRequestMatch, onSubscriptionNeed
 
           {/* Info Items */}
           <div className="space-y-2.5">
+            {hasHealthAlert && (
+              <div className="bg-red-50 border border-red-200 rounded-md px-2.5 py-2">
+                <p className="text-xs font-semibold text-red-700">Health Alert: {healthAlert?.urgency}</p>
+                <p className="text-xs text-red-600 mt-1">
+                  {healthAlert?.needsVaccination ? 'Needs vaccination. ' : ''}
+                  {healthAlert?.needsVetVisit ? 'Needs vet visit.' : ''}
+                </p>
+              </div>
+            )}
+
             <motion.div
               className="flex items-center gap-2.5 text-sm"
               whileHover={{ x: 5 }}
               transition={{ duration: 0.2 }}
             >
               <MapPin className="w-4 h-4 text-primary flex-shrink-0" />
-              <span className="text-muted-foreground truncate">{pet.owner.address}</span>
+              <span className="text-muted-foreground truncate">{ownerAddress}</span>
             </motion.div>
             
             <motion.div
@@ -150,7 +188,7 @@ export function PetCard({ pet, onViewDetails, onRequestMatch, onSubscriptionNeed
             >
               <Calendar className="w-4 h-4 text-primary flex-shrink-0" />
               <span className="text-muted-foreground">
-                متاح من {new Date(pet.availability.from).toLocaleDateString('ar-EG', { month: 'short', day: 'numeric' })}
+                {availabilityLabel}
               </span>
             </motion.div>
           </div>
@@ -160,16 +198,16 @@ export function PetCard({ pet, onViewDetails, onRequestMatch, onSubscriptionNeed
             <div className="flex items-center gap-2">
               <div className="flex items-center gap-1">
                 <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                <span className="text-sm font-semibold">{pet.owner.rating}</span>
+                <span className="text-sm font-semibold">{ownerRating}</span>
               </div>
               <span className="text-xs text-muted-foreground">
-                ({pet.owner.totalMatches} تطابق)
+                ({ownerTotalMatches} تطابق)
               </span>
             </div>
             
             <Badge variant="outline" className="badge-success border-green-300">
               <Shield className="w-3 h-3 mr-1" />
-              {pet.vaccinations.length} لقاح
+              {vaccinationCount} لقاح
             </Badge>
           </div>
         </CardContent>
@@ -194,6 +232,27 @@ export function PetCard({ pet, onViewDetails, onRequestMatch, onSubscriptionNeed
             طلب تزاوج
           </GradientButton>
         </CardFooter>
+
+        {canManage && (
+          <div className="px-5 pb-5 pt-0 flex gap-2.5">
+            <Button
+              variant="outline"
+              className="flex-1"
+              onClick={() => onEdit?.(pet)}
+            >
+              <Pencil className="w-4 h-4" />
+              تعديل
+            </Button>
+            <Button
+              variant="destructive"
+              className="flex-1"
+              onClick={() => onDelete?.(pet)}
+            >
+              <Trash2 className="w-4 h-4" />
+              حذف
+            </Button>
+          </div>
+        )}
       </Card>
     </motion.div>
   );

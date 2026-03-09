@@ -1,10 +1,12 @@
+import { useEffect, useState } from 'react';
 import { Pet } from '../App';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { Separator } from './ui/separator';
 import { ScrollArea } from './ui/scroll-area';
-import { Shield, Heart, Calendar, MapPin, Phone, User, CheckCircle, FileText, AlertCircle } from 'lucide-react';
+import { Shield, Heart, Calendar, MapPin, Phone, User, CheckCircle, FileText, AlertCircle, Sparkles, Stethoscope } from 'lucide-react';
+import { petHealthAIService, type AIHealthRecommendation } from '../services/petHealthAIService';
 
 interface PetDetailsDialogProps {
   pet: Pet;
@@ -14,6 +16,33 @@ interface PetDetailsDialogProps {
 }
 
 export function PetDetailsDialog({ pet, open, onClose, onRequestMatch }: PetDetailsDialogProps) {
+  const [healthAdvice, setHealthAdvice] = useState<AIHealthRecommendation | null>(null);
+  const [adviceLoading, setAdviceLoading] = useState(false);
+  const [adviceError, setAdviceError] = useState<string | null>(null);
+
+  const availabilityFrom = (pet as any).availability?.from;
+  const availabilityTo = (pet as any).availability?.to;
+  const hasValidFromDate = !!availabilityFrom && !Number.isNaN(new Date(availabilityFrom).getTime());
+  const hasValidToDate = !!availabilityTo && !Number.isNaN(new Date(availabilityTo).getTime());
+
+  const runAIHealthCheck = async (notify: boolean) => {
+    try {
+      setAdviceLoading(true);
+      setAdviceError(null);
+      const response = await petHealthAIService.checkPetHealth(pet.id, notify);
+      setHealthAdvice(response.data);
+    } catch (error) {
+      setAdviceError(error instanceof Error ? error.message : 'Failed to get AI recommendation');
+    } finally {
+      setAdviceLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!open || !pet?.id) return;
+    runAIHealthCheck(false);
+  }, [open, pet?.id]);
+
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-3xl max-h-[90vh]">
@@ -113,6 +142,51 @@ export function PetDetailsDialog({ pet, open, onClose, onRequestMatch }: PetDeta
 
             <Separator />
 
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <Sparkles className="w-5 h-5 text-fuchsia-600" />
+                <h4 className="font-semibold text-lg">AI Health Assistant</h4>
+              </div>
+              <div className="bg-fuchsia-50 p-4 rounded-lg border border-fuchsia-200 space-y-3">
+                <Button onClick={() => runAIHealthCheck(true)} disabled={adviceLoading} className="w-full">
+                  <Stethoscope className="w-4 h-4 mr-2" />
+                  {adviceLoading ? 'Analyzing health status...' : 'Re-run AI Health Check + Notify'}
+                </Button>
+
+                {adviceError && (
+                  <p className="text-sm text-red-600">{adviceError}</p>
+                )}
+
+                {healthAdvice && (
+                  <div className="space-y-3 bg-white rounded-md p-3 border border-fuchsia-100">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Badge variant="outline">Urgency: {healthAdvice.urgency}</Badge>
+                      <Badge variant={healthAdvice.needsVaccination ? 'destructive' : 'secondary'}>
+                        {healthAdvice.needsVaccination ? 'Vaccination Needed' : 'Vaccination OK'}
+                      </Badge>
+                      <Badge variant={healthAdvice.needsVetVisit ? 'destructive' : 'secondary'}>
+                        {healthAdvice.needsVetVisit ? 'Vet Visit Needed' : 'Vet Visit OK'}
+                      </Badge>
+                    </div>
+
+                    <div className="space-y-1">
+                      {healthAdvice.reasons.map((reason, index) => (
+                        <p key={index} className="text-sm text-gray-700">• {reason}</p>
+                      ))}
+                    </div>
+
+                    <div className="space-y-1">
+                      {healthAdvice.suggestedActions.map((action, index) => (
+                        <p key={index} className="text-sm font-medium text-gray-900">- {action}</p>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <Separator />
+
             {/* Availability */}
             <div>
               <div className="flex items-center gap-2 mb-3">
@@ -123,12 +197,20 @@ export function PetDetailsDialog({ pet, open, onClose, onRequestMatch }: PetDeta
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-gray-600 mb-1">From</p>
-                    <p className="font-medium">{new Date(pet.availability.from).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                    <p className="font-medium">
+                      {hasValidFromDate
+                        ? new Date(availabilityFrom).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+                        : 'Not specified'}
+                    </p>
                   </div>
                   <div className="text-gray-400">→</div>
                   <div>
                     <p className="text-sm text-gray-600 mb-1">To</p>
-                    <p className="font-medium">{new Date(pet.availability.to).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                    <p className="font-medium">
+                      {hasValidToDate
+                        ? new Date(availabilityTo).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+                        : 'Not specified'}
+                    </p>
                   </div>
                 </div>
               </div>

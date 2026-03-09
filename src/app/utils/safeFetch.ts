@@ -90,11 +90,11 @@ export async function safeFetch<T = any>(
 
       try {
         parsedError = JSON.parse(responseText);
-        
+
         // استخراج رسالة الخطأ المفصلة
         if (parsedError.message) {
           errorMessage = parsedError.message;
-          
+
           // إذا كان هناك validation errors، نضيفها للرسالة
           if (parsedError.errors && Array.isArray(parsedError.errors) && parsedError.errors.length > 0) {
             const validationErrors = parsedError.errors
@@ -175,13 +175,47 @@ export async function safePost<T = any>(
   data: any,
   options: SafeFetchOptions = {}
 ): Promise<SafeFetchResponse<T>> {
+  const { headers, ...restOptions } = options;
   return safeFetch<T>(url, {
     method: 'POST',
+    ...restOptions,
     headers: {
       'Content-Type': 'application/json',
-      ...options.headers
-    },
-    body: JSON.stringify(data),
+      ...headers
+    } as Record<string, string>,
+    body: JSON.stringify(data)
+  });
+}
+
+/**
+ * Helper for PUT requests with JSON body
+ */
+export async function safePut<T = any>(
+  url: string,
+  data: any,
+  options: SafeFetchOptions = {}
+): Promise<SafeFetchResponse<T>> {
+  const { headers, ...restOptions } = options;
+  return safeFetch<T>(url, {
+    method: 'PUT',
+    ...restOptions,
+    headers: {
+      'Content-Type': 'application/json',
+      ...headers
+    } as Record<string, string>,
+    body: JSON.stringify(data)
+  });
+}
+
+/**
+ * Helper for DELETE requests
+ */
+export async function safeDelete<T = any>(
+  url: string,
+  options: SafeFetchOptions = {}
+): Promise<SafeFetchResponse<T>> {
+  return safeFetch<T>(url, {
+    method: 'DELETE',
     ...options
   });
 }

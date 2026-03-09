@@ -1,23 +1,11 @@
-# PetMat AI Matching Service
 
-FastAPI microservice for AI-powered pet breeding match scoring and recommendations.
+  # Pet Breeding Matchmaking Website
 
-## Endpoints
+  This is a code bundle for Pet Breeding Matchmaking Website. The original project is available at https://www.figma.com/design/54TRmuadDRkF3pvYmDo9mM/Pet-Breeding-Matchmaking-Website.
 
-- `POST /train`: Train model with labeled pairs `{ petA, petB, label }` (min 10 samples)
-- `POST /match-score`: Score a pair `{ petA, petB }` → `{ score, probability, contributions, explanation }`
-- `POST /recommendations`: Rank candidate pets for one pet `{ pet, candidates[], limit }`
-- `GET /health`: Health check
+  ## Running the code
 
-## Run
+  Run `npm i` to install the dependencies.
 
-```bash
-python -m venv .venv
-. .venv/Scripts/activate
-pip install -r requirements.txt
-uvicorn main:app --host 0.0.0.0 --port 8001
-```
-
-## Contract with Node.js
-
-Node sends JSON in the shapes defined above and receives structured responses; model explains contributions via logistic regression coefficients or heuristic fallback.
+  Run `npm run dev` to start the development server.
+  

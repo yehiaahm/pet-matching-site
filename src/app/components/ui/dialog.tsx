@@ -64,37 +64,45 @@ function DialogClose({
   );
 }
 
-function DialogOverlay({
-  className,
-  ...props
-}: React.ComponentProps<typeof DialogPrimitive.Overlay>) {
-  return (
-    <DialogPrimitive.Overlay
-      data-slot="dialog-overlay"
-      className={cn(
-        "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50 bg-black/50",
-        className,
-      )}
-      {...props}
-    />
-  );
-}
+const DialogOverlay = React.forwardRef<
+  React.ElementRef<typeof DialogPrimitive.Overlay>,
+  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Overlay>
+>(({ className, ...props }, ref) => (
+  <DialogPrimitive.Overlay
+    ref={ref}
+    data-slot="dialog-overlay"
+    className={cn(
+      "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50 bg-black/50",
+      className,
+    )}
+    {...props}
+  />
+));
 
-function DialogContent({
-  className,
-  children,
-  ariaLabel,
-  ariaDescribedBy,
-  role = "dialog",
-  ...props
-}: DialogContentProps) {
-  const contentRef = React.useRef<HTMLDivElement>(null);
+DialogOverlay.displayName = 'DialogOverlay';
+
+const DialogContent = React.forwardRef<
+  React.ElementRef<typeof DialogPrimitive.Content>,
+  DialogContentProps
+>(({ className, children, ariaLabel, ariaDescribedBy, role = "dialog", ...props }, ref) => {
+  const internalRef = React.useRef<HTMLDivElement | null>(null);
+
+  const setRefs = (node: HTMLDivElement | null) => {
+    internalRef.current = node;
+
+    if (!ref) return;
+    if (typeof ref === 'function') {
+      ref(node);
+    } else {
+      (ref as React.MutableRefObject<HTMLDivElement | null>).current = node;
+    }
+  };
 
   // Focus management
   React.useEffect(() => {
-    if (contentRef.current) {
+    if (internalRef.current) {
       // Focus first focusable element when dialog opens
-      const focusableElements = contentRef.current.querySelectorAll(
+      const focusableElements = internalRef.current.querySelectorAll(
         'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
       ) as NodeListOf<HTMLElement>;
       
@@ -108,7 +116,7 @@ function DialogContent({
     <DialogPortal data-slot="dialog-portal">
       <DialogOverlay />
       <DialogPrimitive.Content
-        ref={contentRef}
+        ref={setRefs}
         data-slot="dialog-content"
         className={cn(
           "bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border p-6 shadow-lg duration-200 sm:max-w-lg",
@@ -131,7 +139,9 @@ function DialogContent({
       </DialogPrimitive.Content>
     </DialogPortal>
   );
-}
+});
+
+DialogContent.displayName = 'DialogContent';
 
 function DialogHeader({ className, ...props }: React.ComponentProps<"div">) {
   return (

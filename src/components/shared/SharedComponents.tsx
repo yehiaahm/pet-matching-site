@@ -21,14 +21,14 @@ export const SharedButton: React.FC<ButtonProps> = ({
   disabled,
   ...props
 }) => {
-  const baseClasses = 'inline-flex items-center justify-center rounded-md font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50';
+  const baseClasses = 'inline-flex items-center justify-center rounded-md font-medium transform-gpu transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 disabled:shadow-none';
   
   const variantClasses = {
-    primary: `bg-blue-600 text-white hover:bg-blue-700`,
-    secondary: 'bg-gray-100 text-gray-900 hover:bg-gray-200',
-    outline: 'border border-gray-300 bg-white hover:bg-gray-50',
-    ghost: 'hover:bg-gray-100',
-    destructive: 'bg-red-600 text-white hover:bg-red-700',
+    primary: `border border-blue-500/40 bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-500/20 hover:shadow-lg hover:shadow-blue-500/30`,
+    secondary: 'border border-gray-300 bg-gradient-to-r from-gray-100 to-gray-200 text-gray-900 shadow-md shadow-gray-300/30 hover:shadow-lg hover:shadow-gray-300/40',
+    outline: 'border border-blue-300 bg-gradient-to-r from-white to-blue-50 text-gray-900 shadow-sm hover:shadow-md',
+    ghost: 'border border-transparent bg-transparent hover:border-blue-200 hover:bg-gradient-to-r hover:from-gray-50 hover:to-blue-50',
+    destructive: 'border border-red-500/40 bg-gradient-to-r from-red-600 to-rose-600 text-white shadow-md shadow-red-500/20 hover:shadow-lg hover:shadow-red-500/30',
   };
 
   const sizeClasses = {

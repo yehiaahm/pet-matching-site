@@ -235,17 +235,11 @@ export function AuthForm({ mode, onModeChange }: AuthFormProps) {
 
     try {
       console.log('📝 AuthForm: Attempting registration');
-      
-      // Prepare password with client-side hashing (additional security)
-      const salt = passwordSecurity.generateSalt();
-      const preparedPassword = await passwordSecurity.preparePasswordForServer(
-        registerForm.password, 
-        salt
-      );
 
       const registrationData: RegisterCredentials = {
         ...registerForm,
-        password: preparedPassword,
+        email: registerForm.email.trim().toLowerCase(),
+        password: registerForm.password,
       };
 
       const result = await authService.register(registrationData);

@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="900" viewBox="0 0 1200 900" fill="none">
+  <rect width="1200" height="900" fill="#F6F7FB"/>
+  <rect x="120" y="120" width="960" height="660" rx="40" fill="white"/>
+  <rect x="200" y="220" width="380" height="460" rx="28" fill="#FEE2E2"/>
+  <rect x="620" y="220" width="380" height="460" rx="28" fill="#FFFBEB"/>
+  <rect x="250" y="280" width="280" height="300" rx="24" fill="#DC2626"/>
+  <rect x="290" y="250" width="200" height="50" rx="16" fill="#991B1B"/>
+  <rect x="675" y="300" width="270" height="250" rx="20" fill="#D97706"/>
+  <circle cx="810" cy="425" r="90" fill="#FEF3C7"/>
+  <path d="M760 400H860V450H760V400Z" fill="#B45309"/>
+  <text x="240" y="740" fill="#0F172A" font-family="Arial, sans-serif" font-size="52" font-weight="700">Pet Food Collection</text>
+</svg>

@@ -58,11 +58,16 @@ export function AdminSupportDashboard({ onClose }: AdminSupportDashboardProps) {
   const [replyMessage, setReplyMessage] = useState('');
   const [isReplying, setIsReplying] = useState(false);
 
+  const getAuthToken = () =>
+    localStorage.getItem('accessToken') ||
+    localStorage.getItem('token') ||
+    localStorage.getItem('authToken');
+
   // Fetch all tickets
   const fetchTickets = async () => {
     setLoading(true);
     try {
-      const token = localStorage.getItem('token');
+      const token = getAuthToken();
       const response = await fetch(`${API_BASE_URL}/support/admin/tickets`, {
         headers: {
           'Authorization': `Bearer ${token}`
@@ -124,7 +129,7 @@ export function AdminSupportDashboard({ onClose }: AdminSupportDashboardProps) {
 
     setIsReplying(true);
     try {
-      const token = localStorage.getItem('token');
+      const token = getAuthToken();
       const response = await fetch(
         `${API_BASE_URL}/support/tickets/${selectedTicket.id}/reply`,
         {
@@ -166,7 +171,7 @@ export function AdminSupportDashboard({ onClose }: AdminSupportDashboardProps) {
   // Update ticket status
   const updateTicketStatus = async (ticketId: string, newStatus: string) => {
     try {
-      const token = localStorage.getItem('token');
+      const token = getAuthToken();
       const response = await fetch(
         `${API_BASE_URL}/support/admin/tickets/${ticketId}/status`,
         {

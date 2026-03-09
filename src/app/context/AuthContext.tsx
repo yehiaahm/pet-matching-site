@@ -3,7 +3,7 @@ import { safeGet } from '../utils/safeFetch';
 import { authService } from '../services/authService';
 import { initSocket } from '../../lib/socket';
 import type { User } from '../../types';
-import { API_BASE_URL } from '@/lib/api';
+import { API_BASE_URL } from '../../lib/api';
 
 interface AuthContextType {
   user: User | null;
@@ -20,7 +20,10 @@ export const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export { API_BASE_URL };
 
+const LOGIN_ACTIVITY_STORAGE_KEY = 'petmat_login_activity';
+
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const MAX_TIMEOUT_MS = 2147483647;
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -37,31 +40,56 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Schedule token refresh
   const scheduleTokenRefresh = useCallback((token: string) => {
     try {
+      const storedRefreshToken = localStorage.getItem('refreshToken');
+      if (!storedRefreshToken) {
+        console.log('ℹ️ AuthContext: No refresh token available, skipping scheduled refresh');
+        return;
+      }
+
       // Parse JWT payload to get expiration time
       const payload = JSON.parse(atob(token.split('.')[1]));
       const expirationTime = payload.exp * 1000; // Convert to milliseconds
       const currentTime = Date.now();
       const timeUntilExpiration = expirationTime - currentTime;
 
+      if (!Number.isFinite(expirationTime) || timeUntilExpiration <= 0) {
+        console.warn('⚠️ AuthContext: Token is invalid or already expired, skipping refresh schedule');
+        return;
+      }
+
       // Schedule refresh 5 minutes before expiration
       const refreshTime = Math.max(timeUntilExpiration - 5 * 60 * 1000, 60 * 1000); // At least 1 minute
 
       console.log(`🔄 AuthContext: Scheduling token refresh in ${Math.round(refreshTime / 1000)} seconds`);
 
+      const timeoutDelay = Math.min(refreshTime, MAX_TIMEOUT_MS);
+
       const timeout = setTimeout(async () => {
+        if (refreshTime > MAX_TIMEOUT_MS) {
+          console.log('⏳ AuthContext: Refresh schedule exceeds max timeout, rescheduling remaining duration');
+          scheduleTokenRefresh(token);
+          return;
+        }
+
+        const latestRefreshToken = localStorage.getItem('refreshToken');
+        if (!latestRefreshToken) {
+          console.log('ℹ️ AuthContext: Refresh token was removed, skipping scheduled refresh');
+          return;
+        }
+
         console.log('🔄 AuthContext: Executing scheduled token refresh');
         const success = await refreshToken();
         if (!success) {
           console.warn('⚠️ AuthContext: Scheduled token refresh failed, logging out');
           logout();
         }
-      }, refreshTime);
+      }, timeoutDelay);
 
       setRefreshTimeout(timeout);
     } catch (error) {
       console.error('❌ AuthContext: Error parsing token for refresh schedule:', error);
     }
-  }, []);
+  }, [MAX_TIMEOUT_MS]);
 
   const logout = useCallback(() => {
     console.log('🚪 AuthContext: Logging out user');
@@ -114,7 +142,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           createdAt: partialUser.createdAt || new Date().toISOString(),
           updatedAt: partialUser.updatedAt || new Date().toISOString(),
           isActive: partialUser.isActive ?? true,
-          role: (partialUser.role || 'user') as 'user' | 'admin' | 'moderator'
+          role: (partialUser.role || 'user') as 'user' | 'admin' | 'moderator' | 'super_admin'
         };
         
         setUser(completeUser);
@@ -174,7 +202,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      // Verify token by fetching user profile
+      // If we have stored user data in localStorage, use it as fallback
+      if (storedUser) {
+        try {
+          const parsedUser = JSON.parse(storedUser) as any;
+          const completeUser: User = {
+            id: parsedUser.id,
+            email: parsedUser.email,
+            firstName: parsedUser.firstName,
+            lastName: parsedUser.lastName,
+            phone: parsedUser.phone,
+            verification: parsedUser.verification || {
+              isVerified: false,
+              badge: 'Unverified'
+            },
+            createdAt: parsedUser.createdAt || new Date().toISOString(),
+            updatedAt: parsedUser.updatedAt || new Date().toISOString(),
+            isActive: parsedUser.isActive ?? true,
+            role: (parsedUser.role || 'user') as 'user' | 'admin' | 'moderator' | 'super_admin'
+          };
+          
+          setUser(completeUser);
+          setToken(storedToken);
+          scheduleTokenRefresh(storedToken);
+          console.log('✅ AuthContext: Using stored user data from localStorage');
+          setIsLoading(false);
+          return;
+        } catch (e) {
+          console.error('❌ AuthContext: Error parsing stored user:', e);
+        }
+      }
+
+      // Try to verify token by fetching user profile
       const response = await safeGet(`${API_BASE_URL}/auth/profile`, {
         headers: {
           Authorization: `Bearer ${storedToken}`,
@@ -197,7 +256,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           createdAt: partialUser.createdAt || new Date().toISOString(),
           updatedAt: partialUser.updatedAt || new Date().toISOString(),
           isActive: partialUser.isActive ?? true,
-          role: (partialUser.role || 'user') as 'user' | 'admin' | 'moderator'
+          role: (partialUser.role || 'user') as 'user' | 'admin' | 'moderator' | 'super_admin'
         };
         
         setUser(completeUser);
@@ -233,12 +292,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             createdAt: parsedUser.createdAt || new Date().toISOString(),
             updatedAt: parsedUser.updatedAt || new Date().toISOString(),
             isActive: parsedUser.isActive ?? true,
-            role: (parsedUser.role || 'user') as 'user' | 'admin' | 'moderator'
+            role: (parsedUser.role || 'user') as 'user' | 'admin' | 'moderator' | 'super_admin'
           };
           
           setUser(completeUser);
           setToken(storedToken);
           scheduleTokenRefresh(storedToken);
+          console.log('✅ AuthContext: Using stored data due to network error');
         } catch (e) {
           logout();
         }
@@ -271,6 +331,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     localStorage.setItem('accessToken', authToken);
     localStorage.setItem('user', JSON.stringify(userData));
+
+    try {
+      const existingRaw = localStorage.getItem(LOGIN_ACTIVITY_STORAGE_KEY);
+      const existing = existingRaw ? JSON.parse(existingRaw) : [];
+      const activityList = Array.isArray(existing) ? existing : [];
+
+      const activityEntry = {
+        id: `login-${Date.now()}-${userData.id}`,
+        email: userData.email,
+        role: userData.role || 'user',
+        time: new Date().toISOString(),
+      };
+
+      localStorage.setItem(
+        LOGIN_ACTIVITY_STORAGE_KEY,
+        JSON.stringify([activityEntry, ...activityList].slice(0, 1000))
+      );
+    } catch (error) {
+      console.warn('⚠️ AuthContext: Failed to persist login activity', error);
+    }
     
     // Store refresh token if provided
     if (authRefreshToken) {

@@ -1,5 +1,9 @@
 import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { AuthContext } from './AuthContext';
+import { toast } from 'sonner';
+
+const USER_SUBSCRIPTIONS_STORAGE_KEY = 'petmat_user_subscriptions';
+const SUBSCRIPTION_NOTIFICATIONS_STORAGE_KEY = 'petmat_subscription_notifications';
 
 interface PremiumFeaturesContextType {
   featureAttempts: Record<string, number>;
@@ -29,6 +33,7 @@ export function PremiumFeaturesProvider({ children }: { children: ReactNode }) {
   const auth = useContext(AuthContext);
   const user = auth?.user;
   const isAuthenticated = auth?.isAuthenticated ?? false;
+  const userEmail = user?.email?.toLowerCase?.() || '';
   const [featureAttempts, setFeatureAttempts] = useState<Record<string, number>>(() => {
     // Load from localStorage
     const saved = localStorage.getItem('premium-feature-attempts');
@@ -40,6 +45,53 @@ export function PremiumFeaturesProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('premium-feature-attempts', JSON.stringify(featureAttempts));
   }, [featureAttempts]);
 
+  const hasActivePaidSubscription = (): boolean => {
+    if (!userEmail) {
+      return false;
+    }
+
+    const subscriptionsRaw = localStorage.getItem(USER_SUBSCRIPTIONS_STORAGE_KEY);
+    if (!subscriptionsRaw) {
+      return false;
+    }
+
+    try {
+      const subscriptions = JSON.parse(subscriptionsRaw);
+      return Boolean(subscriptions?.[userEmail]?.active);
+    } catch {
+      return false;
+    }
+  };
+
+  useEffect(() => {
+    if (!userEmail) {
+      return;
+    }
+
+    const notificationsRaw = localStorage.getItem(SUBSCRIPTION_NOTIFICATIONS_STORAGE_KEY);
+    if (!notificationsRaw) {
+      return;
+    }
+
+    try {
+      const notifications = JSON.parse(notificationsRaw);
+      const userNotification = notifications?.[userEmail];
+      if (!userNotification) {
+        return;
+      }
+
+      toast.success('تم الاشتراك بنجاح 🎉', {
+        description: userNotification.message || 'تم تفعيل مميزات الباقة الخاصة بك.',
+        duration: 5000,
+      });
+
+      delete notifications[userEmail];
+      localStorage.setItem(SUBSCRIPTION_NOTIFICATIONS_STORAGE_KEY, JSON.stringify(notifications));
+    } catch {
+      // ignore malformed notification storage
+    }
+  }, [userEmail]);
+
   const canUseFeature = (featureName: string): boolean => {
     // Not a premium feature, always allow
     if (!PREMIUM_FEATURES.includes(featureName)) {
@@ -48,7 +100,7 @@ export function PremiumFeaturesProvider({ children }: { children: ReactNode }) {
 
     const userRole = user?.role?.toUpperCase?.() || '';
     const isAdmin = isAuthenticated && (userRole === 'ADMIN' || userRole === 'SUPER_ADMIN');
-    if (isAdmin) {
+    if (isAdmin || hasActivePaidSubscription()) {
       return true;
     }
 
@@ -63,7 +115,7 @@ export function PremiumFeaturesProvider({ children }: { children: ReactNode }) {
 
     const userRole = user?.role?.toUpperCase?.() || '';
     const isAdmin = isAuthenticated && (userRole === 'ADMIN' || userRole === 'SUPER_ADMIN');
-    if (isAdmin) {
+    if (isAdmin || hasActivePaidSubscription()) {
       return;
     }
 
@@ -85,7 +137,7 @@ export function PremiumFeaturesProvider({ children }: { children: ReactNode }) {
 
     const userRole = user?.role?.toUpperCase?.() || '';
     const isAdmin = isAuthenticated && (userRole === 'ADMIN' || userRole === 'SUPER_ADMIN');
-    if (isAdmin) {
+    if (isAdmin || hasActivePaidSubscription()) {
       return Infinity;
     }
 

@@ -4,7 +4,7 @@
  */
 
 import { safePost, safeGet } from '../utils/safeFetch';
-import { API_BASE_URL } from '../context/AuthContext';
+import { API_BASE_URL } from '../../lib/api';
 
 export interface LoginCredentials {
   email: string;
@@ -37,6 +37,21 @@ export interface AuthResponse {
   refreshToken: string;
 }
 
+interface LegacyAuthPayload {
+  user?: {
+    id?: string;
+    email?: string;
+    firstName?: string;
+    lastName?: string;
+    name?: string;
+    phone?: string | null;
+    role?: string;
+  };
+  token?: string;
+  accessToken?: string;
+  refreshToken?: string;
+}
+
 export interface PasswordResetRequest {
   email: string;
 }
@@ -52,23 +67,75 @@ export interface ChangePasswordData {
 }
 
 class AuthService {
+  private normalizeUser(user: LegacyAuthPayload['user']) {
+    if (!user?.id || !user?.email) {
+      return null;
+    }
+
+    const fullName = (user.name || '').trim();
+    const nameParts = fullName ? fullName.split(/\s+/) : [];
+    const derivedFirstName = nameParts[0] || '';
+    const derivedLastName = nameParts.slice(1).join(' ');
+
+    return {
+      id: user.id,
+      email: user.email,
+      firstName: user.firstName || derivedFirstName || 'User',
+      lastName: user.lastName || derivedLastName || 'Member',
+      phone: user.phone ?? null,
+      role: user.role || 'user'
+    };
+  }
+
+  private normalizeAuthResponse(raw: any): AuthResponse | null {
+    const source = raw?.data ?? raw;
+    const user = this.normalizeUser(source?.user || raw?.user);
+    const accessToken = source?.accessToken || source?.token || raw?.accessToken || raw?.token;
+    const refreshToken = source?.refreshToken || raw?.refreshToken || '';
+
+    if (!user || !accessToken) {
+      return null;
+    }
+
+    return {
+      user,
+      accessToken,
+      refreshToken
+    };
+  }
+
   /**
    * Login user with email and password
    */
   async login(credentials: LoginCredentials): Promise<{ success: boolean; data?: AuthResponse; error?: string }> {
     try {
-      console.log('🔐 AuthService: Attempting login for:', credentials.email);
+      const normalizedCredentials: LoginCredentials = {
+        ...credentials,
+        email: credentials.email.trim().toLowerCase(),
+      };
+
+      console.log('🔐 AuthService: Attempting login for:', normalizedCredentials.email);
       
       const response = await safePost<{ data: AuthResponse }>(
         `${API_BASE_URL}/auth/login`,
-        credentials
+        normalizedCredentials
       );
 
       if (response.success && response.data) {
-        console.log('✅ AuthService: Login successful');
+        const normalizedData = this.normalizeAuthResponse(response.data);
+
+        if (normalizedData) {
+          console.log('✅ AuthService: Login successful');
+          return {
+            success: true,
+            data: normalizedData
+          };
+        }
+
+        console.error('❌ AuthService: Login response missing required auth fields:', response.data);
         return {
-          success: true,
-          data: response.data.data
+          success: false,
+          error: 'Invalid login response format'
         };
       } else {
         console.error('❌ AuthService: Login failed:', response.error);
@@ -89,28 +156,43 @@ class AuthService {
   /**
    * Register new user
    */
-  async register(credentials: RegisterCredentials): Promise<{ success: boolean; data?: AuthResponse; error?: string }> {
+  async register(credentials: RegisterCredentials): Promise<{ success: boolean; data?: AuthResponse; error?: string; validationErrors?: ValidationError[] }> {
     try {
-      console.log('📝 AuthService: Attempting registration for:', credentials.email);
+      const normalizedCredentials: RegisterCredentials = {
+        ...credentials,
+        email: credentials.email.trim().toLowerCase(),
+      };
+
+      console.log('📝 AuthService: Attempting registration for:', normalizedCredentials.email);
       console.log('🔍 AuthService: Registration data being sent:', {
-        email: credentials.email,
-        firstName: credentials.firstName,
-        lastName: credentials.lastName,
-        phone: credentials.phone || 'none',
-        passwordLength: credentials.password?.length,
+        email: normalizedCredentials.email,
+        firstName: normalizedCredentials.firstName,
+        lastName: normalizedCredentials.lastName,
+        phone: normalizedCredentials.phone || 'none',
+        passwordLength: normalizedCredentials.password?.length,
         API_BASE_URL: API_BASE_URL
       });
       
       const response = await safePost<{ data: AuthResponse }>(
         `${API_BASE_URL}/auth/register`,
-        credentials
+        normalizedCredentials
       );
 
       if (response.success && response.data) {
-        console.log('✅ AuthService: Registration successful');
+        const normalizedData = this.normalizeAuthResponse(response.data);
+
+        if (normalizedData) {
+          console.log('✅ AuthService: Registration successful');
+          return {
+            success: true,
+            data: normalizedData
+          };
+        }
+
+        console.error('❌ AuthService: Registration response missing required auth fields:', response.data);
         return {
-          success: true,
-          data: response.data.data
+          success: false,
+          error: 'Invalid registration response format'
         };
       } else {
         console.error('❌ AuthService: Registration failed:', response.error);
@@ -134,14 +216,16 @@ class AuthService {
         
         return {
           success: false,
-          error: detailedError
+          error: detailedError,
+          validationErrors: undefined
         };
       }
     } catch (error) {
       console.error('❌ AuthService: Registration error:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Network error'
+        error: error instanceof Error ? error.message : 'Network error',
+        validationErrors: undefined
       };
     }
   }
@@ -209,14 +293,25 @@ class AuthService {
       );
 
       if (response.success && response.data) {
+        const normalizedData = this.normalizeAuthResponse(response.data);
+
+        if (!normalizedData) {
+          console.error('❌ AuthService: Refresh response missing required auth fields:', response.data);
+          this.clearTokens();
+          return {
+            success: false,
+            error: 'Invalid token refresh response format'
+          };
+        }
+
         console.log('✅ AuthService: Token refresh successful');
         // Update tokens in localStorage
-        localStorage.setItem('accessToken', response.data.data.accessToken);
-        localStorage.setItem('refreshToken', response.data.data.refreshToken);
+        localStorage.setItem('accessToken', normalizedData.accessToken);
+        localStorage.setItem('refreshToken', normalizedData.refreshToken);
         
         return {
           success: true,
-          data: response.data.data
+          data: normalizedData
         };
       } else {
         console.error('❌ AuthService: Token refresh failed:', response.error);

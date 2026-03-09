@@ -16,7 +16,7 @@ export const getApiBaseUrl = (): string => {
   // ثانياً: استخدام القيمة الافتراضية حسب البيئة
   if (import.meta.env.DEV) {
     console.log('🔧 DEV mode: Using localhost');
-    return 'http://localhost:5000/api/v1';
+    return 'http://localhost:5000/api';
   }
   
   // في حالة الإنتاج بدون متغير بيئة (لا يُنصح به)

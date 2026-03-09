@@ -1,11 +1,13 @@
 // Test setup file - runs before each test file
 const { beforeAll, afterAll, beforeEach, afterEach } = require('@jest/globals');
+require('dotenv').config({ path: './server/.env' });
 
 // Set test environment variables
 process.env.NODE_ENV = 'test';
 process.env.JWT_ACCESS_SECRET = 'test-access-secret-key-for-testing-only';
 process.env.JWT_REFRESH_SECRET = 'test-refresh-secret-key-for-testing-only';
-process.env.DATABASE_URL = 'postgresql://test:test@localhost:5432/petmat_test';
+// Use same database as server, tests will clean up after themselves
+process.env.DATABASE_URL = process.env.DATABASE_URL || 'postgresql://postgres:yehia.hema195200@localhost:5432/pets_db';
 process.env.REDIS_HOST = 'localhost';
 process.env.REDIS_PORT = '6379';
 process.env.REDIS_DB = '1'; // Use different DB for tests
