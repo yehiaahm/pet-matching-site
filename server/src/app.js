@@ -19,6 +19,7 @@ import notificationRoutes from './routes/notificationRoutes.js';
 import vetClinicRoutes from './routes/vetClinicRoutes.js';
 import communityRoutes from './routes/communityRoutes.js';
 import supportRoutes from './routes/supportRoutes.js';
+
 import { initIO } from './sockets/io.js';
 import { AppError } from './utils/appError.js';
 import { requestLogger } from './middleware/requestLogger.js';
@@ -26,42 +27,73 @@ import prisma from './prisma/client.js';
 
 const app = express();
 const server = http.createServer(app);
+
+/* =========================
+   CORS CONFIGURATION
+========================= */
+
 const allowedOrigins =
-  process.env.CORS_ORIGINS?.split(',').map((item) => item.trim()).filter(Boolean) || [
-    'http://localhost:5173',
-    'https://pet-matching-site.vercel.app',
-  ];
+  process.env.CORS_ORIGINS?.split(',')
+    .map((item) => item.trim())
+    .filter(Boolean) || [
+      'http://localhost:5173',
+      'http://localhost:3000',
+      'https://pet-matching-site.vercel.app'
+    ];
+
+const corsOptions = {
+  origin: allowedOrigins,
+  credentials: true,
+  methods: ['GET','POST','PUT','PATCH','DELETE','OPTIONS'],
+  allowedHeaders: ['Content-Type','Authorization','X-CSRF-Token']
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
+
+/* =========================
+   SOCKET.IO
+========================= */
 
 const io = new Server(server, {
   cors: {
     origin: allowedOrigins,
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
-  },
+    methods: ['GET','POST','PUT','PATCH','DELETE']
+  }
 });
 
 initIO(io);
 
-app.use(
-  cors({
-    origin: allowedOrigins,
-    credentials: true,
-  })
-);
+/* =========================
+   SECURITY & MIDDLEWARE
+========================= */
+
 app.use(helmet());
+
 app.use(
   rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 300,
     standardHeaders: true,
-    legacyHeaders: false,
+    legacyHeaders: false
   })
 );
+
 app.use(requestLogger);
+
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
+/* =========================
+   HEALTH CHECK
+========================= */
+
 app.get('/api/health', (_req, res) => {
-  res.json({ status: 'ok', service: 'PETMAT API', uptime: Math.round(process.uptime()) });
+  res.json({
+    status: 'ok',
+    service: 'PETMAT API',
+    uptime: Math.round(process.uptime())
+  });
 });
 
 app.get('/api/v1/health', (_req, res) => {
@@ -71,15 +103,18 @@ app.get('/api/v1/health', (_req, res) => {
       status: 'healthy',
       service: 'PETMAT API',
       database: 'connected',
-      uptime: Math.round(process.uptime()),
-    },
+      uptime: Math.round(process.uptime())
+    }
   });
 });
 
 app.get('/api/health/live', async (_req, res, next) => {
   try {
+
     const startedAt = Date.now();
+
     await prisma.$queryRaw`SELECT 1`;
+
     const dbLatencyMs = Date.now() - startedAt;
 
     res.json({
@@ -88,17 +123,23 @@ app.get('/api/health/live', async (_req, res, next) => {
       database: 'ok',
       dbLatencyMs,
       uptime: Math.round(process.uptime()),
-      timestamp: new Date().toISOString(),
+      timestamp: new Date().toISOString()
     });
+
   } catch (error) {
+
     next(new AppError(`Health check failed: ${error.message}`, 503));
+
   }
 });
 
 app.get('/api/v1/health/live', async (_req, res, next) => {
   try {
+
     const startedAt = Date.now();
+
     await prisma.$queryRaw`SELECT 1`;
+
     const dbLatencyMs = Date.now() - startedAt;
 
     res.json({
@@ -109,13 +150,20 @@ app.get('/api/v1/health/live', async (_req, res, next) => {
         database: 'connected',
         dbLatencyMs,
         uptime: Math.round(process.uptime()),
-        timestamp: new Date().toISOString(),
-      },
+        timestamp: new Date().toISOString()
+      }
     });
+
   } catch (error) {
+
     next(new AppError(`Health check failed: ${error.message}`, 503));
+
   }
 });
+
+/* =========================
+   API ROUTES
+========================= */
 
 app.use('/api/auth', authRoutes);
 app.use('/api/pets', petRoutes);
@@ -132,6 +180,10 @@ app.use('/api/vet-clinics', vetClinicRoutes);
 app.use('/api/community', communityRoutes);
 app.use('/api/support', supportRoutes);
 
+/* =========================
+   VERSIONED API
+========================= */
+
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/pets', petRoutes);
 app.use('/api/v1/match', matchRoutes);
@@ -147,11 +199,16 @@ app.use('/api/v1/vet-clinics', vetClinicRoutes);
 app.use('/api/v1/community', communityRoutes);
 app.use('/api/v1/support', supportRoutes);
 
+/* =========================
+   ERROR HANDLING
+========================= */
+
 app.use((_req, _res, next) => {
   next(new AppError('Route not found', 404));
 });
 
 app.use((err, _req, res, _next) => {
+
   const statusCode = err.statusCode || 500;
   const message = err.message || 'Internal server error';
 
@@ -161,11 +218,19 @@ app.use((err, _req, res, _next) => {
 
   res.status(statusCode).json({
     message,
-    ...(process.env.NODE_ENV !== 'production' ? { stack: err.stack } : {}),
+    ...(process.env.NODE_ENV !== 'production'
+      ? { stack: err.stack }
+      : {})
   });
+
 });
 
+/* =========================
+   START SERVER
+========================= */
+
 const port = process.env.PORT || 5000;
+
 server.listen(port, () => {
-  console.log(`PETMAT backend running on http://localhost:${port}`);
+  console.log(`🚀 PETMAT backend running on http://localhost:${port}`);
 });
