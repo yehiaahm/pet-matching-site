@@ -21,7 +21,7 @@ export const getApiBaseUrl = (): string => {
   
   // في حالة الإنتاج بدون متغير بيئة (لا يُنصح به)
   console.warn('⚠️ No VITE_API_BASE found, using fallback');
-  return 'https://pet-matching-site.onrender.com/api/v1';
+  return 'https://pet-matching-site-production.up.railway.app/api/v1';
 };
 
 // تصدير URL الثابت

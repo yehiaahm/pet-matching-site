@@ -62,7 +62,7 @@ class JWTAuthService {
       this.baseURL = reactApiUrl;
     } else if (typeof window !== 'undefined') {
       // Fallback للـ production
-      this.baseURL = 'https://pet-matching-site.onrender.com';
+      this.baseURL = 'https://pet-matching-site-production.up.railway.app';
     } else {
       this.baseURL = 'http://localhost:5000';
     }

@@ -69,7 +69,7 @@ DATABASE_URL=postgresql://postgres:password@localhost:5432/pet_breeding_db
 JWT_SECRET=your-super-secret-jwt-key-change-in-production
 JWT_EXPIRES_IN=7d
 REFRESH_TOKEN_EXPIRES_IN=30d
-CORS_ORIGINS=https://your-frontend-domain.onrender.com
+CORS_ORIGINS=https://pet-matching-site-production.up.railway.app
 UPLOAD_DIR=uploads
 MAX_FILE_SIZE=5242880
 LOG_LEVEL=info
@@ -78,7 +78,7 @@ LOG_LEVEL=info
 #### 5. **Deploy**
 - Click "Create Web Service"
 - Render will automatically build and deploy
-- Your app will be available at `https://your-app-name.onrender.com`
+- Your app will be available at `https://pet-matching-site-production.up.railway.app`
 
 ---
 
