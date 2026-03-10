@@ -26,14 +26,15 @@ import prisma from './prisma/client.js';
 
 const app = express();
 const server = http.createServer(app);
-const allowedOrigins = (process.env.CORS_ORIGINS || '')
-  .split(',')
-  .map((item) => item.trim())
-  .filter(Boolean);
+const allowedOrigins =
+  process.env.CORS_ORIGINS?.split(',').map((item) => item.trim()).filter(Boolean) || [
+    'http://localhost:5173',
+    'https://pet-matching-site.vercel.app',
+  ];
 
 const io = new Server(server, {
   cors: {
-    origin: allowedOrigins.length > 0 ? allowedOrigins : true,
+    origin: allowedOrigins,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
   },
 });
@@ -42,7 +43,7 @@ initIO(io);
 
 app.use(
   cors({
-    origin: allowedOrigins.length > 0 ? allowedOrigins : true,
+    origin: allowedOrigins,
     credentials: true,
   })
 );
