@@ -61,7 +61,7 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
-app.options('*', cors(corsOptions));
+app.options('/{*any}', cors(corsOptions));
 
 /* =========================
    SOCKET.IO

@@ -22,10 +22,15 @@ export interface SystemAnnouncement {
 
 const getAuthHeaders = () => {
   const token = localStorage.getItem('accessToken') || localStorage.getItem('token') || localStorage.getItem('authToken');
-  return {
+  const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    Authorization: token ? `Bearer ${token}` : '',
   };
+
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
+  return headers;
 };
 
 const api = async <T>(url: string, options: RequestInit = {}): Promise<T> => {

@@ -1,24 +1,28 @@
 import { useEffect, useState } from 'react';
 import { AlertTriangle, X } from 'lucide-react';
 import { notificationCenterService, SystemAnnouncement } from '../services/notificationCenterService';
-import { initSocket, onSystemAnnouncement, offSystemAnnouncement } from '../../lib/socket';
+import { onSystemAnnouncement, offSystemAnnouncement } from '../../lib/socket';
 import { useAuth } from '../context/AuthContext';
 
 export function SystemAlertBanner() {
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const [announcement, setAnnouncement] = useState<SystemAnnouncement | null>(null);
   const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
+    if (!isAuthenticated) {
+      setAnnouncement(null);
+      return;
+    }
+
     notificationCenterService
       .getActiveAnnouncement()
       .then((res) => setAnnouncement(res.data || null))
       .catch(() => {});
-  }, []);
+  }, [isAuthenticated]);
 
   useEffect(() => {
     if (!user?.id) return;
-    const socket = initSocket('/api/v1', user.id);
 
     const handler = (payload: SystemAnnouncement | null) => {
       setAnnouncement(payload || null);
@@ -28,7 +32,6 @@ export function SystemAlertBanner() {
     onSystemAnnouncement(handler);
     return () => {
       offSystemAnnouncement(handler);
-      socket?.disconnect();
     };
   }, [user?.id]);
 

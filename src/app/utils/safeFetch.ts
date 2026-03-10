@@ -89,10 +89,12 @@ export async function safeFetch<T = any>(
       let parsedError: any = undefined;
 
       try {
-        parsedError = JSON.parse(responseText);
+        if (responseText && responseText.trim() !== '') {
+          parsedError = JSON.parse(responseText);
+        }
 
         // استخراج رسالة الخطأ المفصلة
-        if (parsedError.message) {
+        if (parsedError?.message) {
           errorMessage = parsedError.message;
 
           // إذا كان هناك validation errors، نضيفها للرسالة
@@ -102,8 +104,10 @@ export async function safeFetch<T = any>(
               .join(', ');
             errorMessage = `${errorMessage} - ${validationErrors}`;
           }
-        } else if (parsedError.error) {
+        } else if (parsedError?.error) {
           errorMessage = parsedError.error;
+        } else if (responseText && responseText.trim() !== '') {
+          errorMessage = responseText;
         }
       } catch (e) {
         // If JSON parsing fails, keep responseText available for debugging

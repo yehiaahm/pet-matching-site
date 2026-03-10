@@ -2,9 +2,35 @@ import { io, Socket } from 'socket.io-client';
 
 let socket: Socket | null = null;
 
+function resolveSocketServerUrl(apiBase: string): string {
+  try {
+    if (apiBase.startsWith('/')) {
+      return window.location.origin;
+    }
+
+    const parsed = new URL(apiBase, window.location.origin);
+    return parsed.origin;
+  } catch {
+    return window.location.origin;
+  }
+}
+
 export function initSocket(apiBase: string, userId: string) {
-  socket = io(apiBase.replace(/\/api\/v1$/, ''));
-  socket.emit('registerUser', userId);
+  const serverUrl = resolveSocketServerUrl(apiBase);
+
+  if (socket) {
+    socket.disconnect();
+    socket = null;
+  }
+
+  socket = io(serverUrl, {
+    withCredentials: true,
+  });
+
+  socket.on('connect', () => {
+    socket?.emit('registerUser', userId);
+  });
+
   return socket;
 }
 
