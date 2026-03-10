@@ -42,7 +42,19 @@ const allowedOrigins =
     ];
 
 const corsOptions = {
-  origin: allowedOrigins,
+  origin: function (origin, callback) {
+
+    if (!origin) {
+      return callback(null, true);
+    }
+
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+
+    return callback(new Error('CORS not allowed'));
+  },
+
   credentials: true,
   methods: ['GET','POST','PUT','PATCH','DELETE','OPTIONS'],
   allowedHeaders: ['Content-Type','Authorization','X-CSRF-Token']
